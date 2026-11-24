@@ -27,6 +27,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
+import { matchesRequestSearch } from "@/lib/request-navigation"
 import { cn } from "@/lib/utils"
 import { getRequests, skipRequest, submitQuote } from "@/lib/services/requests"
 import type { SourcingRequest } from "@/lib/types"
@@ -72,7 +73,7 @@ export default function RequestsPage() {
   useEffect(() => {
     const openId = searchParams.get("open")
     if (!openId || !requests.length) return
-    const found = requests.find((r) => r.id === openId)
+    const found = requests.find((r) => r.id === openId || r.requestId === openId)
     if (found) openRequest(found)
     // URL-driven opening is recalculated when the result set changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,8 +81,7 @@ export default function RequestsPage() {
 
   const filtered = useMemo(() => {
     return requests.filter((r) => {
-      const q = search.toLowerCase()
-      const matchesSearch = !q || `${r.id} ${r.part} ${r.vehicle}`.toLowerCase().includes(q)
+      const matchesSearch = matchesRequestSearch(r, search)
       const matchesUrgency =
         urgency === "all" ||
         (urgency === "urgent" && r.urgent) ||
@@ -107,7 +107,7 @@ export default function RequestsPage() {
     if (!selected) return
     if (!membership) return
     await skipRequest(selected.id, membership.business.id)
-    toast(`Skipped ${selected.id}`)
+    toast(`Skipped ${selected.requestNumber ?? selected.id}`)
     setSelected(null)
     await load()
   }
@@ -131,7 +131,7 @@ export default function RequestsPage() {
       supplierNotes: quoteForm.supplierNotes,
     }, membership.business.id)
     if (result.ok) {
-      toast(`Quotation submitted for ${selected.id}.`)
+      toast(`Quotation submitted for ${selected.requestNumber ?? selected.id}.`)
       setQuoteOpen(false)
       setSelected(null)
       await load()
@@ -214,7 +214,7 @@ export default function RequestsPage() {
                           r.urgent && "bg-danger shadow-[0_0_0_4px_var(--red-bg)]"
                         )}
                       />
-                      {r.id}
+                      {r.requestNumber ?? r.id}
                     </span>
                     <span className="cell-sub">
                       {r.urgent ? "Priority sourcing" : "Standard request"}
@@ -267,7 +267,7 @@ export default function RequestsPage() {
               className="w-full rounded-xl border border-line p-3.5 text-left"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="cell-title text-sm">{r.id}</span>
+                <span className="cell-title text-sm">{r.requestNumber ?? r.id}</span>
                 <StatusBadge status={r.urgent ? "Urgent" : "Standard"} />
               </div>
               <p className="font-bold">{r.part}</p>
@@ -302,7 +302,7 @@ export default function RequestsPage() {
                   {selected.urgent ? "PRIORITY REQUEST" : "SOURCING REQUEST"}
                 </div>
                 <SheetTitle className="font-heading text-xl font-extrabold">
-                  {selected.id}
+                  {selected.requestNumber ?? selected.id}
                 </SheetTitle>
                 <StatusBadge status={selected.urgent ? "Urgent" : "Standard"} />
               </SheetHeader>

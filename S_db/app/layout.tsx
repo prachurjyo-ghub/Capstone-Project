@@ -21,6 +21,7 @@ const themeScript = `
 })();
 `;
 
+// Browser extensions may add body attributes before hydration; descendant mismatches remain checked.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,7 +32,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
             <PortalShell>{children}</PortalShell>

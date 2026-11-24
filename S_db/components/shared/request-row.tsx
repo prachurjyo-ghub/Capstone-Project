@@ -15,14 +15,14 @@ export function RequestRow({ request, onClick, className }: RequestRowProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        "grid w-full grid-cols-[auto_1fr_auto] items-center gap-[13px] rounded-[11px] border-0 bg-transparent p-[13px] text-left text-ink transition-colors hover:bg-canvas",
+        "grid w-full grid-cols-[auto_minmax(0,1fr)_auto] max-[480px]:grid-cols-[auto_minmax(0,1fr)] items-center gap-[13px] rounded-[11px] border-0 bg-transparent p-[13px] text-left text-ink transition-colors hover:bg-canvas",
         className
       )}
     >
       <span className="grid size-[46px] place-items-center rounded-[11px] border border-line bg-gradient-to-br from-[#e3eaf2] to-white font-heading text-[11px] font-extrabold text-[#78879b] dark:from-[#13293f] dark:to-[#0d2134]">
         {request.photo ? "PHOTO" : "PART"}
       </span>
-      <span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">
         <strong className="block text-[13px]">
           <i
             className={cn(
@@ -36,9 +36,9 @@ export function RequestRow({ request, onClick, className }: RequestRowProps) {
           {request.vehicle} · {request.location} · Qty {request.qty}
         </span>
       </span>
-      <span className="text-right">
+      <span className="text-right max-[480px]:col-start-2 max-[480px]:text-left">
         <b className="block text-xs text-danger">{request.expires}</b>
-        <span className="text-[10px] text-muted-text">response time left</span>
+        <span className="text-[10px] text-muted-text">Respond by</span>
       </span>
     </button>
   )

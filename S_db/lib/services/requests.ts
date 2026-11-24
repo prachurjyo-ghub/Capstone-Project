@@ -1,3 +1,4 @@
+import { matchesRequestSearch } from "@/lib/request-navigation"
 import { apiRequest } from "@/lib/services/auth"
 import type { QuotePayload, RequestCategory, RequestStatus, SourcingRequest } from "@/lib/types"
 
@@ -6,7 +7,7 @@ type AssignmentDetail = Omit<InboxRow, "request"> & { request: Omit<InboxRow["re
 const headers = (businessId: string) => ({ "x-business-id": businessId })
 const requestStatus = (value: string): RequestStatus => value === "VIEWED" ? "viewed" : value === "QUOTED" ? "quoted" : value === "SKIPPED" ? "skipped" : "new"
 const mapRequest = (row: AssignmentDetail): SourcingRequest => ({
-  id: row.id, requestId: row.request.id, requestItemId: row.request.items[0]?.id ?? "",
+  id: row.id, requestNumber: row.request.requestNumber, requestId: row.request.id, requestItemId: row.request.items[0]?.id ?? "",
   part: row.request.items.map((item) => item.description).join(", ") || row.request.title || "Sourcing request",
   vehicle: row.request.vehicle ? [row.request.vehicle.make, row.request.vehicle.model, row.request.vehicle.year].filter(Boolean).join(" ") : "Vehicle details pending",
   location: row.request.deliveryArea ? [row.request.deliveryArea.area, row.request.deliveryArea.city].filter(Boolean).join(", ") : "Area pending",
@@ -40,5 +41,5 @@ export async function submitQuote(payload: QuotePayload, businessId: string) {
   await apiRequest(`/supplier/quotations/${draft.id}/submit`, { method: "POST", headers: headers(businessId), body: JSON.stringify({ idempotencyKey: crypto.randomUUID() }) })
   return { ok: true as const, data: { requestId: payload.requestId } }
 }
-export function filterRequests(list: SourcingRequest[], filters: { tab?: RequestStatus; search?: string; urgency?: "all" | "urgent" | "standard"; category?: RequestCategory | "all" }) { return list.filter((r) => (!filters.tab || r.status === filters.tab) && (filters.urgency === "urgent" ? r.urgent : filters.urgency === "standard" ? !r.urgent : true) && (!filters.category || filters.category === "all" || r.category === filters.category) && (!filters.search?.trim() || `${r.id} ${r.part} ${r.vehicle}`.toLowerCase().includes(filters.search.toLowerCase()))) }
+export function filterRequests(list: SourcingRequest[], filters: { tab?: RequestStatus; search?: string; urgency?: "all" | "urgent" | "standard"; category?: RequestCategory | "all" }) { return list.filter((r) => (!filters.tab || r.status === filters.tab) && (filters.urgency === "urgent" ? r.urgent : filters.urgency === "standard" ? !r.urgent : true) && (!filters.category || filters.category === "all" || r.category === filters.category) && matchesRequestSearch(r, filters.search ?? "")) }
 export function countRequestsByStatus(list: SourcingRequest[]) { return { new: list.filter((r) => r.status === "new").length, viewed: list.filter((r) => r.status === "viewed").length, quoted: list.filter((r) => r.status === "quoted").length, skipped: list.filter((r) => r.status === "skipped").length } }

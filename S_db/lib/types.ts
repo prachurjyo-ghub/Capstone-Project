@@ -16,6 +16,7 @@ export type RequestCategory =
 
 export interface SourcingRequest {
   id: string;
+  requestNumber?: string;
   requestId?: string;
   requestItemId?: string;
   part: string;

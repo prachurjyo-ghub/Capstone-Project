@@ -101,10 +101,10 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              router.push(`/requests?q=${encodeURIComponent(query)}`)
+              router.push(`/requests?view=rfqs&q=${encodeURIComponent(query.trim())}`)
             }
           }}
-          placeholder="Search requests, part numbers or orders"
+          placeholder="Search sourcing requests"
       />
 
       <div className="flex items-center gap-2.5 max-[420px]:gap-1.5">

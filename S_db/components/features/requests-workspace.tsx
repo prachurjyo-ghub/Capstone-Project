@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { HiOutlineClipboardDocumentCheck } from "react-icons/hi2"
 import { toast } from "sonner"
@@ -18,6 +19,7 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea"
 import { ApiError, errorMessage } from "@/lib/services/auth"
 import { confirmPurchaseRequest, getPurchaseRequests } from "@/lib/services/purchase-requests"
+import { resolveRequestView } from "@/lib/request-navigation"
 import type { FixedPurchaseRequest } from "@/lib/types"
 import { useAuth } from "@/providers/auth-provider"
 
@@ -25,12 +27,12 @@ function readable(value: string) {
   return value.toLowerCase().replaceAll("_", " ").replace(/(^|\s)\S/g, (letter) => letter.toUpperCase())
 }
 
-function FixedPurchaseRequests() {
+function FixedPurchaseRequests({ initialSearch = "" }: { initialSearch?: string }) {
   const { membership } = useAuth()
   const businessId = membership?.business.id
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<FixedPurchaseRequest[]>([])
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(initialSearch)
   const [status, setStatus] = useState("all")
   const [selected, setSelected] = useState<FixedPurchaseRequest | null>(null)
   const [note, setNote] = useState("")
@@ -88,7 +90,7 @@ function FixedPurchaseRequests() {
     <PageHeader eyebrow="FIXED-PRICE REQUESTS" title="Purchase requests" description="Confirm genuine and aftermarket availability. PartsArc reserves stock and commission credits together, so a failed credit check never confirms the order." />
     <Panel>
       <div className="flex flex-wrap gap-3 border-b border-line p-4">
-        <SearchControl className="min-w-[240px] flex-1" placeholder="Search reference, product or SKU" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <SearchControl className="w-full min-w-0 flex-1 sm:min-w-[240px]" placeholder="Search reference, product or SKU" value={search} onChange={(event) => setSearch(event.target.value)} />
         <FormSelect value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All requests</option><option value="pending">Pending</option><option value="credits">Awaiting credits</option><option value="confirmed">Confirmed</option><option value="closed">Closed</option></FormSelect>
       </div>
       {filtered.length ? <div className="divide-y divide-line">{filtered.map((request) => {
@@ -122,9 +124,19 @@ function FixedPurchaseRequests() {
 }
 
 export default function RequestsWorkspace() {
-  const [view, setView] = useState("purchases")
+  const params = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const view = resolveRequestView(new URLSearchParams(params.toString()))
+  const setView = (next: string) => {
+    const query = new URLSearchParams(params.toString())
+    query.set("view", next)
+    query.delete("open")
+    router.replace(`${pathname}?${query}`, { scroll: false })
+  }
+  const search = params.get("q") ?? ""
   return <div className="space-y-5">
     <Panel><DataTabs value={view} onChange={setView} tabs={[{ id: "purchases", label: "Purchase requests" }, { id: "rfqs", label: "Used-part RFQs" }, { id: "quotations", label: "My quotations" }]} /></Panel>
-    {view === "purchases" ? <FixedPurchaseRequests /> : view === "rfqs" ? <RequestsPage /> : <QuotationsPage />}
+    {view === "purchases" ? <FixedPurchaseRequests key={search} initialSearch={search} /> : view === "rfqs" ? <RequestsPage key={search} /> : <QuotationsPage />}
   </div>
 }
