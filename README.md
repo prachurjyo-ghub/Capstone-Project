@@ -55,7 +55,7 @@ The migrations initialize the schema. Create demonstration data later through th
 
 ## Verify and stop
 
-Run `npm run typecheck` and `npm run build` in the API and each available portal. Check the customer landing page and bundled media, catalogue empty state, registration, sign-in, and submission of a request with a photo. The [handoff guide](README-TEAMMATE.md) covers full cross-portal acceptance after Part 2.
+Run `npm run build` and `npm run typecheck` in the API and each available portal. Check the customer landing page and bundled media, catalogue empty state, registration, sign-in, and submission of a request with a photo. The [handoff guide](README-TEAMMATE.md) covers full cross-portal acceptance after Part 2.
 
 For API integration tests, create and migrate a separate empty test database. For the default Compose configuration, run the following from the repository root, then enter `backend`:
 
@@ -70,4 +70,4 @@ The test runner uses `TEST_DATABASE_URL` from `backend/.env`. Keep the test data
 
 ## Source and contributions
 
-The existing Parts Ark UI, business logic, migrations, tests, and bundled media were imported from revision `b6b9154`. The Capstone changes cover source packaging, local configuration, and portal integration. Prachurjyo owns the shared local foundation and customer deliverable. Fardin owns the supplier and admin integration and end-to-end acceptance. Record the changes and checks each person actually completes in their pull requests.
+The existing Parts Ark UI, business logic, migrations, tests, and bundled media were imported from revision `b6b9154`. The Capstone changes cover source packaging, local configuration, portal integration, and a Next.js 16.4.6 patch update for the university portal builds. Prachurjyo owns the shared local foundation and customer deliverable. Fardin owns the supplier and admin integration and end-to-end acceptance. Record the changes and checks each person actually completes in their pull requests.

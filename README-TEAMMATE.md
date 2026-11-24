@@ -4,7 +4,7 @@ The [Capstone Project](https://github.com/prachurjyo-ghub/Capstone-Project) is t
 
 ## Assignment
 
-Integrate the supplier and admin portals with the Capstone customer app and shared API. Review and verify supplier onboarding, entitlements, listings and moderation, requests, quotations, fulfillment, finance, and operations. The portal source reuses Parts Ark revision `b6b9154`. Describe the integration, fixes, and verification you actually perform in your PR.
+Integrate the supplier and admin portals with the Capstone customer app and shared API. Review and verify supplier onboarding, entitlements, listings and moderation, requests, quotations, fulfillment, finance, and operations. The portal source reuses Parts Ark revision `b6b9154` with the Next.js 16.4.6 patch applied for the Capstone build. Describe the integration, fixes, and verification you actually perform in your PR.
 
 ## Branch workflow
 
@@ -34,7 +34,7 @@ You can stage and commit each portal separately if you prefer. Keep your integra
 
 ## Verification for the pull request
 
-- Run `npm run typecheck` and `npm run build` in both portals. Run `npm test` in `A_db` and the relevant backend integration suites against the separate local test database.
+- Run `npm run build` and `npm run typecheck` in both portals. Run `npm test` in `A_db` and the relevant backend integration suites against the separate local test database.
 - Verify login, session restoration after reload, portal permissions, and supplier invitation activation. Check that a supplier can see only its own commercial records.
 - Create a customer sourcing request with a photo, assign it in admin, submit a supplier quotation, publish a customer option, accept it, and complete order and fulfillment through invoice. Verify that photo access is restricted to authorized sessions.
 - Verify a fixed-price purchase request with an eligible listing and a used-part RFQ. Confirm customer catalogue visibility after listing moderation, and check the worker heartbeat and a local notification.
