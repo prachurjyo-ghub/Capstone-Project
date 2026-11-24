@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-seed
+coverage
+package-lock.json
+prisma/migrations
+.env
+.env.*
+!.env.example

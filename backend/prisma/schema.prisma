@@ -1,0 +1,2574 @@
+// PartsArc Task 2 — Database design
+// Application services generate public identifiers (requestNumber, quotationNumber, etc.).
+// Do not generate those sequences inside this schema.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  CUSTOMER
+  SUPPLIER_OWNER
+  SUPPLIER_STAFF
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AccountStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum InvitationType {
+  SUPPLIER_OWNER
+  SUPPLIER_STAFF
+  ADMIN
+}
+
+enum SupplierBusinessStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum ProductCondition {
+  NEW
+  RECONDITIONED
+  USED
+}
+
+enum InventoryAvailability {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+  HIDDEN
+}
+
+enum InventoryImportStatus {
+  PREVIEWED
+  CONFIRMED
+  EXPIRED
+}
+
+enum SupplierListingClassification {
+  NEW_GENUINE
+  NEW_AFTERMARKET
+  USED
+}
+
+enum ListingPublicationStatus {
+  DRAFT
+  PUBLISHED
+  SUSPENDED
+  ARCHIVED
+}
+
+enum ListingModerationStatus {
+  NOT_REVIEWED
+  APPROVED
+  FLAGGED
+  REJECTED
+}
+
+enum SourcingRequestType {
+  CUSTOM_SOURCING
+  FIXED_PRICE_PURCHASE
+  USED_PART_RFQ
+}
+
+enum CreditRequirementStatus {
+  NOT_APPLICABLE
+  ELIGIBLE
+  AWAITING_CREDITS
+  RESERVED
+}
+
+enum SupplierWalletStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum WalletTopUpStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WalletEntryType {
+  TOP_UP
+  CREDIT_RESERVATION
+  COMMISSION_SETTLEMENT
+  RESERVATION_RELEASE
+  ADJUSTMENT
+  REVERSAL
+}
+
+enum CommissionReservationStatus {
+  RESERVED
+  SETTLED
+  RELEASED
+  REVERSED
+}
+
+enum RequestUrgency {
+  STANDARD
+  URGENT
+}
+
+enum SourcingRequestStatus {
+  DRAFT
+  SUBMITTED
+  MATCHING
+  QUOTING
+  AWAITING_CUSTOMER
+  ACCEPTED
+  ORDERED
+  CANCELLED
+  EXPIRED
+  CLOSED
+}
+
+enum RequestItemStatus {
+  OPEN
+  QUOTED
+  ACCEPTED
+  CANCELLED
+  EXPIRED
+}
+
+enum SupplierAssignmentStatus {
+  ASSIGNED
+  VIEWED
+  SKIPPED
+  QUOTED
+  EXPIRED
+  WITHDRAWN
+}
+
+enum SupplierAssignmentEventType {
+  ASSIGNED
+  VIEWED
+  SKIPPED
+  EXPIRED
+  WITHDRAWN
+  DEADLINE_CHANGED
+  CLARIFICATION_ASKED
+  CLARIFICATION_REPLIED
+  QUOTED
+}
+
+enum QuotationStatus {
+  DRAFT
+  SUBMITTED
+  ADMIN_REVIEW
+  CLARIFICATION
+  SENT_TO_CUSTOMER
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  SUPERSEDED
+  WITHDRAWN
+}
+
+enum AdminReviewStatus {
+  PENDING
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+enum ClarificationInitiator {
+  SUPPLIER
+  ADMIN
+}
+
+enum SourcingOptionStatus {
+  DRAFT
+  PUBLISHED
+  WITHDRAWN
+  REJECTED
+  ACCEPTED
+  INVALIDATED
+  EXPIRED
+}
+
+enum OrderStatus {
+  PENDING_SUPPLIER_CONFIRMATION
+  CONFIRMED
+  SUPPLIER_PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  IN_DELIVERY
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  FAILED
+  RETURNED
+}
+
+enum InventoryReservationStatus {
+  ACTIVE
+  RELEASED
+  CONSUMED
+  RESTORED
+}
+
+enum InventoryReservationEventType {
+  RESERVED
+  RELEASED
+  CONSUMED
+  RESTORED
+}
+
+enum OrderConversionStatus {
+  ORDER_CREATED
+  EXCEPTION
+}
+
+enum OrderCancellationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OrderReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  RECEIVED
+  INSPECTED
+}
+
+enum UrgentEligibilityStatus {
+  NOT_APPLICABLE
+  PENDING
+  ELIGIBLE
+  UNAVAILABLE
+}
+
+enum DeliveryStatus {
+  SCHEDULED
+  COURIER_ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  RETURNED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+}
+
+enum SettlementStatus {
+  PENDING
+  SCHEDULED
+  PAID
+  ON_HOLD
+  CANCELLED
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PROCESSED
+  FAILED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+  REFUNDED
+}
+
+enum TransactionType {
+  CUSTOMER_PAYMENT
+  SUPPLIER_PAYABLE
+  SUPPLIER_PAYOUT
+  SUPPLIER_RECOVERY
+  PLATFORM_MARGIN
+  DELIVERY_CHARGE
+  PRIORITY_CHARGE
+  REFUND
+  ADJUSTMENT
+  REVERSAL
+}
+
+enum SupplierPayableStatus {
+  OPEN
+  PARTIALLY_PAID
+  PAID
+  RECOVERY_DUE
+}
+
+enum OperationalCaseType {
+  ORDER_EXCEPTION
+  DELIVERY_EXCEPTION
+  CANCELLATION
+  RETURN
+  REFUND
+  DISPUTE
+  OTHER
+}
+
+enum OperationalCaseStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+}
+
+enum ConversationType {
+  REQUEST
+  QUOTATION
+  ORDER
+  SUPPORT
+  GENERAL
+}
+
+enum ParticipantType {
+  CUSTOMER
+  SUPPLIER
+  ADMIN
+  SYSTEM
+}
+
+enum MessageSenderType {
+  CUSTOMER
+  SUPPLIER
+  ADMIN
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+enum AttachmentKind {
+  PHOTO
+  DOCUMENT
+  OTHER
+}
+
+enum SupplierSubscriptionStatus {
+  PENDING
+  SCHEDULED
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  CANCELLED
+}
+
+enum SubscriptionInvoiceStatus {
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+enum SubscriptionPaymentKind {
+  PAYMENT
+  REVERSAL
+}
+
+enum CategoryRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ---------------------------------------------------------------------------
+// Identity and access
+// ---------------------------------------------------------------------------
+
+model User {
+  id                 String        @id @default(uuid()) @db.Uuid
+  email              String        @unique
+  fullName           String?
+  phone              String?
+  passwordHash       String
+  role               UserRole
+  accountStatus      AccountStatus @default(PENDING_VERIFICATION)
+  emailVerifiedAt    DateTime?
+  phoneVerifiedAt    DateTime?
+  suspendedAt        DateTime?
+  suspendedReason    String?
+  disabledAt         DateTime?
+  mustChangePassword Boolean       @default(false)
+  passwordChangedAt  DateTime?
+  lastLoginAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  customerProfile              CustomerProfile?
+  supplierMemberships          SupplierUser[]
+  invitationsSent              AccountInvitation[]           @relation("InvitationInviter")
+  invitationsAccepted          AccountInvitation[]           @relation("InvitationAcceptor")
+  refreshSessions              RefreshSession[]
+  passwordResetTokens          PasswordResetToken[]
+  verificationTokens           VerificationToken[]
+  ownedBusinesses              SupplierBusiness[]            @relation("BusinessOwnerUser")
+  conversationParts            ConversationParticipant[]
+  messagesSent                 Message[]
+  notifications                Notification[]
+  auditLogs                    AuditLog[]
+  statusChanges                RequestStatusHistory[]        @relation("RequestStatusActor")
+  quotationStatusChanges       QuotationStatusHistory[]      @relation("QuotationStatusActor")
+  fulfillmentChanges           FulfillmentStatusHistory[]    @relation("FulfillmentStatusActor")
+  deliveryStatusChanges        DeliveryStatusHistory[]       @relation("DeliveryStatusActor")
+  inventoryAdjustments         InventoryStockAdjustment[]    @relation("InventoryAdjustmentActor")
+  inventoryImportPreviews      InventoryCsvPreview[]         @relation("InventoryImportCreator")
+  supplierAssignmentEvents     SupplierAssignmentHistory[]   @relation("SupplierAssignmentHistoryActor")
+  clarificationsAsked          SupplierClarification[]       @relation("SupplierClarificationAsker")
+  clarificationsReplied        SupplierClarification[]       @relation("SupplierClarificationReplier")
+  optionClarificationsAsked    CustomerOptionClarification[] @relation("CustomerOptionClarificationAsker")
+  optionClarificationsReplied  CustomerOptionClarification[] @relation("CustomerOptionClarificationReplier")
+  optionHistoryChanges         SourcingOptionHistory[]       @relation("SourcingOptionHistoryActor")
+  reservationEvents            InventoryReservationEvent[]   @relation("InventoryReservationEventActor")
+  cancellationRequests         OrderCancellationRequest[]    @relation("OrderCancellationRequester")
+  cancellationDecisions        OrderCancellationRequest[]    @relation("OrderCancellationDecisionActor")
+  orderFailuresReported        OrderFailure[]                @relation("OrderFailureReporter")
+  orderReturnsRequested        OrderReturn[]                 @relation("OrderReturnRequester")
+  orderReturnsDecided          OrderReturn[]                 @relation("OrderReturnDecisionActor")
+  orderReturnsReceived         OrderReturn[]                 @relation("OrderReturnReceiver")
+  urgentFulfillmentChanges     UrgentFulfillmentHistory[]    @relation("UrgentFulfillmentActor")
+  notificationDeliveries       NotificationDelivery[]
+  financialEntriesRecorded     Transaction[]                 @relation("TransactionRecorder")
+  invoicesIssued               Invoice[]                     @relation("InvoiceIssuer")
+  invoicesVoided               Invoice[]                     @relation("InvoiceVoidActor")
+  settlementsRecorded          SupplierSettlement[]          @relation("SettlementRecorder")
+  refundsApproved              Refund[]                      @relation("RefundApprover")
+  refundsProcessed             Refund[]                      @relation("RefundProcessor")
+  operationalCasesAssigned     OperationalCase[]             @relation("OperationalCaseAssignee")
+  operationalCaseHistory       OperationalCaseHistory[]      @relation("OperationalCaseHistoryActor")
+  businessConfigurations       PlatformBusinessConfig[]      @relation("BusinessConfigUpdater")
+  subscriptionsCreated         SupplierSubscription[]        @relation("SubscriptionCreator")
+  subscriptionEvents           SupplierSubscriptionEvent[]   @relation("SubscriptionEventActor")
+  subscriptionInvoicesIssued   SubscriptionInvoice[]         @relation("SubscriptionInvoiceIssuer")
+  subscriptionInvoicesVoided   SubscriptionInvoice[]         @relation("SubscriptionInvoiceVoidActor")
+  subscriptionPaymentsRecorded SubscriptionPayment[]         @relation("SubscriptionPaymentRecorder")
+  categoryRequestsReviewed     SupplierCategoryRequest[]     @relation("CategoryRequestReviewer")
+  categoryRequestsCreated      SupplierCategoryRequest[]     @relation("CategoryRequestCreator")
+  listingsModerated            SupplierInventory[]           @relation("ListingModerator")
+  commissionPoliciesCreated    CommissionPolicy[]            @relation("CommissionPolicyCreator")
+  walletTopUpsCreated          WalletTopUp[]                 @relation("WalletTopUpCreator")
+  walletTopUpsReviewed         WalletTopUp[]                 @relation("WalletTopUpReviewer")
+  walletEntriesRecorded        WalletLedgerEntry[]           @relation("WalletEntryActor")
+
+  @@index([role, accountStatus])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model CustomerProfile {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @db.Uuid
+  fullName      String
+  preferredName String?
+  companyName   String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user                 User                          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  addresses            CustomerAddress[]
+  vehicles             Vehicle[]
+  sourcingRequests     SourcingRequest[]
+  orders               Order[]
+  invoices             Invoice[]
+  transactions         Transaction[]
+  refunds              Refund[]
+  optionClarifications CustomerOptionClarification[]
+  optionAcceptances    OptionAcceptance[]
+  cancellationRequests OrderCancellationRequest[]
+  returns              OrderReturn[]
+  conversations        Conversation[]
+
+  @@index([fullName])
+  @@map("customer_profiles")
+}
+
+model SupplierBusiness {
+  id                      String                 @id @default(uuid()) @db.Uuid
+  /// Public business code for operations; generated by application services later.
+  businessCode            String?                @unique
+  legalName               String
+  displayName             String
+  tradeLicense            String?
+  vatNumber               String?
+  email                   String?
+  phone                   String?
+  status                  SupplierBusinessStatus @default(DRAFT)
+  verifiedAt              DateTime?
+  suspendedAt             DateTime?
+  suspendedReason         String?
+  closedAt                DateTime?
+  ownerUserId             String?                @db.Uuid
+  serviceAreas            String[]               @default([])
+  supportedCategories     String[]               @default([])
+  subscriptionGraceEndsAt DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  ownerUser               User?                       @relation("BusinessOwnerUser", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  members                 SupplierUser[]
+  locations               SupplierLocation[]
+  inventory               SupplierInventory[]
+  assignments             SupplierRequestAssignment[]
+  quotations              Quotation[]
+  orders                  Order[]
+  settlements             SupplierSettlement[]
+  invitations             AccountInvitation[]
+  stockAdjustments        InventoryStockAdjustment[]
+  inventoryImportPreviews InventoryCsvPreview[]
+  inventoryReservations   InventoryReservation[]
+  conversations           Conversation[]
+  financialEntries        Transaction[]
+  payables                SupplierPayable[]
+  operationalCases        OperationalCase[]
+  subscriptions           SupplierSubscription[]
+  subscriptionInvoices    SubscriptionInvoice[]
+  categoryRequests        SupplierCategoryRequest[]
+  targetedRequests        SourcingRequest[]           @relation("TargetSupplierRequests")
+  wallet                  SupplierWallet?
+  walletTopUps            WalletTopUp[]
+  commissionReservations  CommissionReservation[]
+  walletEntries           WalletLedgerEntry[]
+
+  @@index([status])
+  @@index([displayName])
+  @@index([ownerUserId])
+  @@map("supplier_businesses")
+}
+
+model SupplierUser {
+  id         String    @id @default(uuid()) @db.Uuid
+  businessId String    @db.Uuid
+  userId     String    @db.Uuid
+  title      String?
+  isPrimary  Boolean   @default(false)
+  isActive   Boolean   @default(true)
+  joinedAt   DateTime  @default(now())
+  leftAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  business SupplierBusiness @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([businessId, userId])
+  @@index([userId])
+  @@index([businessId, isActive])
+  @@map("supplier_users")
+}
+
+model SupplierLocation {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @db.Uuid
+  label       String
+  addressLine String
+  city        String
+  area        String?
+  postalCode  String?
+  phone       String?
+  isPrimary   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business   SupplierBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  deliveries Delivery[]
+
+  @@index([businessId, isActive])
+  @@map("supplier_locations")
+}
+
+model AccountInvitation {
+  id               String           @id @default(uuid()) @db.Uuid
+  email            String
+  invitationType   InvitationType
+  status           InvitationStatus @default(PENDING)
+  /// Hashed invitation token only — never store plaintext tokens.
+  tokenHash        String           @unique
+  businessId       String?          @db.Uuid
+  invitedByUserId  String           @db.Uuid
+  acceptedByUserId String?          @db.Uuid
+  expiresAt        DateTime
+  acceptedAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  business   SupplierBusiness? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  invitedBy  User              @relation("InvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+  acceptedBy User?             @relation("InvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([email, status])
+  @@index([businessId, status])
+  @@index([expiresAt])
+  @@map("account_invitations")
+}
+
+model RefreshSession {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @db.Uuid
+  /// Stable identifier shared by every rotated token for one device session.
+  familyId            String    @db.Uuid
+  /// Hashed refresh token only.
+  tokenHash           String    @unique
+  /// Hash of the double-submit CSRF token paired with this refresh token.
+  csrfTokenHash       String
+  userAgent           String?
+  ipAddress           String?
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  replacedByTokenHash String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId, revokedAt])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  /// Hashed reset token only.
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  /// Hashed verification token only.
+  tokenHash String    @unique
+  purpose   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Customer information
+// ---------------------------------------------------------------------------
+
+model CustomerAddress {
+  id                   String    @id @default(uuid()) @db.Uuid
+  customerId           String    @db.Uuid
+  label                String?
+  recipientName        String?
+  phone                String?
+  addressLine          String
+  addressLine2         String?
+  area                 String?
+  city                 String
+  postalCode           String?
+  landmark             String?
+  deliveryInstructions String?
+  isDefault            Boolean   @default(false)
+  isActive             Boolean   @default(true)
+  deletedAt            DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  customer         CustomerProfile   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sourcingRequests SourcingRequest[]
+  orders           Order[]
+
+  @@index([customerId, isDefault])
+  @@index([customerId, isActive])
+  @@map("customer_addresses")
+}
+
+model Vehicle {
+  id                 String    @id @default(uuid()) @db.Uuid
+  customerId         String    @db.Uuid
+  make               String
+  model              String
+  year               Int?
+  variant            String?
+  registrationNumber String?
+  chassisVin         String?
+  engineInfo         String?
+  notes              String?
+  isActive           Boolean   @default(true)
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  customer         CustomerProfile       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sourcingRequests SourcingRequest[]
+  requestItems     SourcingRequestItem[]
+
+  @@index([customerId, isActive])
+  @@index([make, model, year])
+  @@map("vehicles")
+}
+
+// ---------------------------------------------------------------------------
+// Product catalogue
+// ---------------------------------------------------------------------------
+
+model PartCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  imagePath   String?
+  parentId    String?  @db.Uuid
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent                   PartCategory?             @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children                 PartCategory[]            @relation("CategoryTree")
+  products                 Product[]
+  requestItems             SourcingRequestItem[]
+  categoryRequests         SupplierCategoryRequest[] @relation("CategoryRequestApprovedCategory")
+  proposedCategoryRequests SupplierCategoryRequest[] @relation("CategoryRequestProposedParent")
+
+  @@index([parentId])
+  @@index([isActive])
+  @@map("part_categories")
+}
+
+model Brand {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@index([isActive])
+  @@map("brands")
+}
+
+model Product {
+  id            String    @id @default(uuid()) @db.Uuid
+  /// Catalogue SKU / public product code; generated or curated by services later.
+  catalogueCode String?   @unique
+  name          String
+  description   String?
+  imagePath     String?
+  categoryId    String    @db.Uuid
+  brandId       String?   @db.Uuid
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  category       PartCategory           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  brand          Brand?                 @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  numbers        ProductNumber[]
+  compatibility  ProductCompatibility[]
+  inventory      SupplierInventory[]
+  requestItems   SourcingRequestItem[]
+  quotationItems QuotationItem[]
+  orderItems     OrderItem[]
+
+  @@index([categoryId, isActive])
+  @@index([brandId, isActive])
+  @@index([name])
+  @@map("products")
+}
+
+model ProductNumber {
+  id           String   @id @default(uuid()) @db.Uuid
+  productId    String   @db.Uuid
+  partNumber   String
+  isPrimary    Boolean  @default(false)
+  manufacturer String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, partNumber])
+  @@index([partNumber])
+  @@map("product_numbers")
+}
+
+model ProductCompatibility {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @db.Uuid
+  make      String
+  model     String
+  yearFrom  Int?
+  yearTo    Int?
+  variant   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([make, model])
+  @@map("product_compatibilities")
+}
+
+model SupplierInventory {
+  id                    String                         @id @default(uuid()) @db.Uuid
+  businessId            String                         @db.Uuid
+  productId             String                         @db.Uuid
+  sku                   String
+  stockQuantity         Int                            @default(0)
+  reservedQuantity      Int                            @default(0)
+  unitPrice             Decimal                        @db.Decimal(12, 2)
+  minimumStock          Int                            @default(0)
+  availabilityStatus    InventoryAvailability          @default(OUT_OF_STOCK)
+  condition             ProductCondition               @default(NEW)
+  listingClassification SupplierListingClassification?
+  publicationStatus     ListingPublicationStatus       @default(DRAFT)
+  moderationStatus      ListingModerationStatus        @default(NOT_REVIEWED)
+  moderatedByUserId     String?                        @db.Uuid
+  moderatedAt           DateTime?
+  publishedAt           DateTime?
+  preparationTimeMin    Int?
+  notes                 String?
+  lastStockUpdateAt     DateTime?
+  isAvailable           Boolean                        @default(true)
+  isActive              Boolean                        @default(true)
+  legacyImageExempt     Boolean                        @default(false)
+  version               Int                            @default(0)
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+
+  business         SupplierBusiness           @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  product          Product                    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  stockAdjustments InventoryStockAdjustment[]
+  quotationItems   QuotationItem[]
+  reservations     InventoryReservation[]
+  orderItems       OrderItem[]
+  purchaseRequests SourcingRequest[]
+  images           SupplierListingImage[]
+  moderatedBy      User?                      @relation("ListingModerator", fields: [moderatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([businessId, sku])
+  @@unique([businessId, productId, listingClassification])
+  @@index([businessId, availabilityStatus])
+  @@index([productId, availabilityStatus])
+  @@index([businessId, isActive])
+  @@index([legacyImageExempt, publicationStatus, moderationStatus])
+  @@map("supplier_inventory")
+}
+
+model SupplierListingImage {
+  id           String   @id @default(uuid()) @db.Uuid
+  inventoryId  String   @db.Uuid
+  storageKey   String   @unique
+  mimeType     String
+  byteSize     Int
+  width        Int
+  height       Int
+  displayOrder Int
+  isPrimary    Boolean  @default(false)
+  version      Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  inventory SupplierInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@unique([inventoryId, displayOrder])
+  @@index([inventoryId, isPrimary])
+  @@map("supplier_listing_images")
+}
+
+model InventoryStockAdjustment {
+  id                String   @id @default(uuid()) @db.Uuid
+  businessId        String   @db.Uuid
+  inventoryId       String   @db.Uuid
+  actorUserId       String   @db.Uuid
+  idempotencyKey    String
+  reason            String
+  quantityDelta     Int
+  previousQuantity  Int
+  resultingQuantity Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  business  SupplierBusiness  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  inventory SupplierInventory @relation(fields: [inventoryId], references: [id], onDelete: Restrict)
+  actorUser User              @relation("InventoryAdjustmentActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@unique([businessId, idempotencyKey])
+  @@index([inventoryId, createdAt])
+  @@index([businessId, createdAt])
+  @@map("inventory_stock_adjustments")
+}
+
+model InventoryCsvPreview {
+  id              String                @id @default(uuid()) @db.Uuid
+  businessId      String                @db.Uuid
+  createdByUserId String                @db.Uuid
+  status          InventoryImportStatus @default(PREVIEWED)
+  sourceHash      String
+  rows            Json
+  summary         Json
+  result          Json?
+  expiresAt       DateTime
+  confirmedAt     DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  business      SupplierBusiness @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  createdByUser User             @relation("InventoryImportCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, status, createdAt])
+  @@index([expiresAt])
+  @@map("inventory_csv_previews")
+}
+
+// ---------------------------------------------------------------------------
+// Sourcing requests
+// ---------------------------------------------------------------------------
+
+model SourcingRequest {
+  id                   String                  @id @default(uuid()) @db.Uuid
+  /// Human-readable request number (e.g. RFQ-24018). Generated by application services later.
+  requestNumber        String                  @unique
+  customerId           String                  @db.Uuid
+  vehicleId            String?                 @db.Uuid
+  deliveryAddressId    String?                 @db.Uuid
+  status               SourcingRequestStatus   @default(DRAFT)
+  urgency              RequestUrgency          @default(STANDARD)
+  requestType          SourcingRequestType     @default(CUSTOM_SOURCING)
+  listingId            String?                 @db.Uuid
+  targetBusinessId     String?                 @db.Uuid
+  creditStatus         CreditRequirementStatus @default(NOT_APPLICABLE)
+  title                String?
+  customerNotes        String?
+  adminNotes           String?
+  deliveryLocationText String?
+  vehicleSnapshot      Json?
+  deliverySnapshot     Json?
+  neededByAt           DateTime?
+  submissionKey        String?
+  cancelReason         String?
+  version              Int                     @default(0)
+  serviceAreaEligible  Boolean?
+  responseDeadlineAt   DateTime?
+  submittedAt          DateTime?
+  cancelledAt          DateTime?
+  expiredAt            DateTime?
+  closedAt             DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  customer          CustomerProfile             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle           Vehicle?                    @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  deliveryAddress   CustomerAddress?            @relation(fields: [deliveryAddressId], references: [id], onDelete: SetNull)
+  items             SourcingRequestItem[]
+  attachments       RequestAttachment[]
+  statusHistory     RequestStatusHistory[]
+  assignments       SupplierRequestAssignment[]
+  quotations        Quotation[]
+  orders            Order[]
+  conversations     Conversation[]
+  sourcingOptions   SourcingOption[]
+  optionAcceptances OptionAcceptance[]
+  listing           SupplierInventory?          @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  targetBusiness    SupplierBusiness?           @relation("TargetSupplierRequests", fields: [targetBusinessId], references: [id], onDelete: SetNull)
+
+  @@unique([customerId, submissionKey])
+  @@index([customerId, createdAt])
+  @@index([status, urgency, createdAt])
+  @@index([requestType, status, createdAt])
+  @@index([targetBusinessId, creditStatus, createdAt])
+  @@index([listingId])
+  @@index([responseDeadlineAt])
+  @@index([urgency, status])
+  @@map("sourcing_requests")
+}
+
+model SourcingRequestItem {
+  id            String            @id @default(uuid()) @db.Uuid
+  requestId     String            @db.Uuid
+  lineNumber    Int
+  productId     String?           @db.Uuid
+  categoryId    String?           @db.Uuid
+  vehicleId     String?           @db.Uuid
+  description   String
+  partNumber    String?
+  quantity      Int               @default(1)
+  status        RequestItemStatus @default(OPEN)
+  customerNotes String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  request         SourcingRequest        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  product         Product?               @relation(fields: [productId], references: [id], onDelete: SetNull)
+  category        PartCategory?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  vehicle         Vehicle?               @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  attachments     RequestAttachment[]
+  quotationItems  QuotationItem[]
+  orderItems      OrderItem[]
+  optionLines     SourcingOptionLine[]
+  acceptanceItems OptionAcceptanceItem[]
+
+  @@unique([requestId, lineNumber])
+  @@index([requestId, status])
+  @@index([productId])
+  @@index([categoryId])
+  @@map("sourcing_request_items")
+}
+
+model RequestAttachment {
+  id            String         @id @default(uuid()) @db.Uuid
+  requestId     String         @db.Uuid
+  requestItemId String?        @db.Uuid
+  kind          AttachmentKind @default(PHOTO)
+  fileName      String
+  mimeType      String
+  storageKey    String         @unique
+  byteSize      Int?
+  width         Int?
+  height        Int?
+  contentSha256 String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  request     SourcingRequest      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestItem SourcingRequestItem? @relation(fields: [requestItemId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([requestItemId])
+  @@map("request_attachments")
+}
+
+model RequestStatusHistory {
+  id          String                 @id @default(uuid()) @db.Uuid
+  requestId   String                 @db.Uuid
+  fromStatus  SourcingRequestStatus?
+  toStatus    SourcingRequestStatus
+  note        String?
+  actorUserId String?                @db.Uuid
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  request   SourcingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actorUser User?           @relation("RequestStatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, createdAt])
+  @@map("request_status_history")
+}
+
+model SupplierRequestAssignment {
+  id          String                   @id @default(uuid()) @db.Uuid
+  requestId   String                   @db.Uuid
+  businessId  String                   @db.Uuid
+  status      SupplierAssignmentStatus @default(ASSIGNED)
+  assignedAt  DateTime                 @default(now())
+  viewedAt    DateTime?
+  skippedAt   DateTime?
+  quotedAt    DateTime?
+  expiredAt   DateTime?
+  withdrawnAt DateTime?
+  note        String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  request        SourcingRequest             @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  business       SupplierBusiness            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  history        SupplierAssignmentHistory[]
+  clarifications SupplierClarification[]
+  quotations     Quotation[]
+
+  @@unique([requestId, businessId])
+  @@index([businessId, status, assignedAt])
+  @@index([requestId, status])
+  @@map("supplier_request_assignments")
+}
+
+model SupplierAssignmentHistory {
+  id                 String                      @id @default(uuid()) @db.Uuid
+  assignmentId       String                      @db.Uuid
+  eventType          SupplierAssignmentEventType
+  fromStatus         SupplierAssignmentStatus?
+  toStatus           SupplierAssignmentStatus?
+  previousDeadlineAt DateTime?
+  deadlineAt         DateTime?
+  reason             String?
+  actorUserId        String?                     @db.Uuid
+  createdAt          DateTime                    @default(now())
+
+  assignment SupplierRequestAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  actorUser  User?                     @relation("SupplierAssignmentHistoryActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([assignmentId, createdAt])
+  @@map("supplier_assignment_history")
+}
+
+model SupplierClarification {
+  id              String                 @id @default(uuid()) @db.Uuid
+  assignmentId    String                 @db.Uuid
+  quotationId     String?                @db.Uuid
+  initiator       ClarificationInitiator @default(SUPPLIER)
+  question        String
+  askedByUserId   String?                @db.Uuid
+  askedAt         DateTime               @default(now())
+  reply           String?
+  repliedByUserId String?                @db.Uuid
+  repliedAt       DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  assignment    SupplierRequestAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  quotation     Quotation?                @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  askedByUser   User?                     @relation("SupplierClarificationAsker", fields: [askedByUserId], references: [id], onDelete: SetNull)
+  repliedByUser User?                     @relation("SupplierClarificationReplier", fields: [repliedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([assignmentId, askedAt])
+  @@index([quotationId, askedAt])
+  @@map("supplier_clarifications")
+}
+
+// ---------------------------------------------------------------------------
+// Quotations
+// ---------------------------------------------------------------------------
+
+model Quotation {
+  id                   String            @id @default(uuid()) @db.Uuid
+  /// Human-readable quotation number (e.g. QT-8821). Generated by application services later.
+  quotationNumber      String            @unique
+  requestId            String            @db.Uuid
+  businessId           String            @db.Uuid
+  assignmentId         String?           @db.Uuid
+  submissionKey        String?
+  version              Int               @default(0)
+  status               QuotationStatus   @default(DRAFT)
+  adminReviewStatus    AdminReviewStatus @default(PENDING)
+  revisionGroupId      String            @db.Uuid
+  revisionNumber       Int               @default(1)
+  supersedesId         String?           @db.Uuid
+  brandOffered         String?
+  condition            ProductCondition  @default(NEW)
+  availableQuantity    Int?
+  /// Supplier unit/base pricing before platform adjustments.
+  supplierSubtotal     Decimal           @db.Decimal(12, 2)
+  preparationTimeMin   Int?
+  deliveryEstimateText String?
+  compatibilityNotes   String?
+  alternativePartInfo  String?
+  supplierNotes        String?
+  adminNotes           String?
+  adminMargin          Decimal           @default(0) @db.Decimal(12, 2)
+  deliveryCharge       Decimal           @default(0) @db.Decimal(12, 2)
+  priorityCharge       Decimal           @default(0) @db.Decimal(12, 2)
+  /// Customer-facing total presented after admin review.
+  customerTotal        Decimal           @db.Decimal(12, 2)
+  validUntil           DateTime?
+  submittedAt          DateTime?
+  acceptedAt           DateTime?
+  rejectedAt           DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  request         SourcingRequest            @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  business        SupplierBusiness           @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  assignment      SupplierRequestAssignment? @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  supersedes      Quotation?                 @relation("QuotationRevisions", fields: [supersedesId], references: [id], onDelete: SetNull)
+  revisions       Quotation[]                @relation("QuotationRevisions")
+  items           QuotationItem[]
+  statusHistory   QuotationStatusHistory[]
+  orders          Order[]
+  conversations   Conversation[]
+  clarifications  SupplierClarification[]
+  sourcingOptions SourcingOption[]
+
+  @@unique([revisionGroupId, revisionNumber])
+  @@unique([businessId, submissionKey])
+  @@index([assignmentId, status])
+  @@index([requestId, status])
+  @@index([businessId, status, createdAt])
+  @@index([adminReviewStatus, status])
+  @@index([validUntil])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id                  String           @id @default(uuid()) @db.Uuid
+  quotationId         String           @db.Uuid
+  requestItemId       String?          @db.Uuid
+  productId           String?          @db.Uuid
+  inventoryId         String?          @db.Uuid
+  alternativeToItemId String?          @db.Uuid
+  lineNumber          Int
+  description         String
+  brand               String?
+  partNumber          String?
+  condition           ProductCondition @default(NEW)
+  quantity            Int              @default(1)
+  supplierUnitPrice   Decimal          @db.Decimal(12, 2)
+  supplierLineTotal   Decimal          @db.Decimal(12, 2)
+  customerUnitPrice   Decimal?         @db.Decimal(12, 2)
+  customerLineTotal   Decimal?         @db.Decimal(12, 2)
+  compatibilityNotes  String?
+  alternativePartInfo String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  quotation       Quotation              @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  requestItem     SourcingRequestItem?   @relation(fields: [requestItemId], references: [id], onDelete: SetNull)
+  product         Product?               @relation(fields: [productId], references: [id], onDelete: SetNull)
+  inventory       SupplierInventory?     @relation(fields: [inventoryId], references: [id], onDelete: SetNull)
+  alternativeTo   QuotationItem?         @relation("QuotationItemAlternatives", fields: [alternativeToItemId], references: [id], onDelete: Cascade)
+  alternatives    QuotationItem[]        @relation("QuotationItemAlternatives")
+  optionLines     SourcingOptionLine[]
+  acceptanceItems OptionAcceptanceItem[]
+  orderItems      OrderItem[]
+
+  @@unique([quotationId, lineNumber])
+  @@index([quotationId])
+  @@index([requestItemId])
+  @@index([inventoryId])
+  @@index([alternativeToItemId])
+  @@map("quotation_items")
+}
+
+model QuotationStatusHistory {
+  id          String           @id @default(uuid()) @db.Uuid
+  quotationId String           @db.Uuid
+  fromStatus  QuotationStatus?
+  toStatus    QuotationStatus
+  note        String?
+  actorUserId String?          @db.Uuid
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  actorUser User?     @relation("QuotationStatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([quotationId, createdAt])
+  @@map("quotation_status_history")
+}
+
+model SourcingOption {
+  id                   String               @id @default(uuid()) @db.Uuid
+  optionNumber         String               @unique
+  requestId            String               @db.Uuid
+  quotationId          String               @db.Uuid
+  versionGroupId       String               @db.Uuid
+  revisionNumber       Int                  @default(1)
+  supersedesId         String?              @db.Uuid
+  status               SourcingOptionStatus @default(DRAFT)
+  currency             String               @default("BDT")
+  supplierSubtotal     Decimal              @db.Decimal(12, 2)
+  platformMargin       Decimal              @default(0) @db.Decimal(12, 2)
+  deliveryCharge       Decimal              @default(0) @db.Decimal(12, 2)
+  priorityCharge       Decimal              @default(0) @db.Decimal(12, 2)
+  customerItemsTotal   Decimal              @db.Decimal(12, 2)
+  customerTotal        Decimal              @db.Decimal(12, 2)
+  preparationTimeMin   Int?
+  deliveryEstimateText String?
+  compatibilityNotes   String?
+  customerNotes        String?
+  internalNotes        String?
+  validUntil           DateTime
+  publishedAt          DateTime?
+  withdrawnAt          DateTime?
+  rejectedAt           DateTime?
+  invalidatedAt        DateTime?
+  invalidationReason   String?
+  version              Int                  @default(0)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  request        SourcingRequest               @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  quotation      Quotation                     @relation(fields: [quotationId], references: [id], onDelete: Restrict)
+  supersedes     SourcingOption?               @relation("SourcingOptionRevisions", fields: [supersedesId], references: [id], onDelete: SetNull)
+  revisions      SourcingOption[]              @relation("SourcingOptionRevisions")
+  lines          SourcingOptionLine[]
+  history        SourcingOptionHistory[]
+  clarifications CustomerOptionClarification[]
+  acceptance     OptionAcceptance?
+
+  @@unique([versionGroupId, revisionNumber])
+  @@index([requestId, status, createdAt])
+  @@index([quotationId, status])
+  @@index([validUntil])
+  @@map("sourcing_options")
+}
+
+model SourcingOptionLine {
+  id                  String           @id @default(uuid()) @db.Uuid
+  optionId            String           @db.Uuid
+  requestItemId       String           @db.Uuid
+  quotationItemId     String           @db.Uuid
+  lineNumber          Int
+  description         String
+  brand               String?
+  partNumber          String?
+  condition           ProductCondition
+  quantity            Int
+  supplierUnitPrice   Decimal          @db.Decimal(12, 2)
+  supplierLineTotal   Decimal          @db.Decimal(12, 2)
+  customerUnitPrice   Decimal          @db.Decimal(12, 2)
+  customerLineTotal   Decimal          @db.Decimal(12, 2)
+  compatibilityNotes  String?
+  alternativePartInfo String?
+  isAlternative       Boolean          @default(false)
+  createdAt           DateTime         @default(now())
+
+  option          SourcingOption         @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  requestItem     SourcingRequestItem    @relation(fields: [requestItemId], references: [id], onDelete: Restrict)
+  quotationItem   QuotationItem          @relation(fields: [quotationItemId], references: [id], onDelete: Restrict)
+  acceptanceItems OptionAcceptanceItem[]
+
+  @@unique([optionId, requestItemId])
+  @@unique([optionId, lineNumber])
+  @@index([quotationItemId])
+  @@map("sourcing_option_lines")
+}
+
+model SourcingOptionHistory {
+  id          String                @id @default(uuid()) @db.Uuid
+  optionId    String                @db.Uuid
+  fromStatus  SourcingOptionStatus?
+  toStatus    SourcingOptionStatus
+  reason      String?
+  actorUserId String?               @db.Uuid
+  createdAt   DateTime              @default(now())
+
+  option    SourcingOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  actorUser User?          @relation("SourcingOptionHistoryActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([optionId, createdAt])
+  @@map("sourcing_option_history")
+}
+
+model CustomerOptionClarification {
+  id              String    @id @default(uuid()) @db.Uuid
+  optionId        String    @db.Uuid
+  customerId      String    @db.Uuid
+  question        String
+  askedByUserId   String?   @db.Uuid
+  askedAt         DateTime  @default(now())
+  reply           String?
+  repliedByUserId String?   @db.Uuid
+  repliedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  option        SourcingOption  @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  customer      CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  askedByUser   User?           @relation("CustomerOptionClarificationAsker", fields: [askedByUserId], references: [id], onDelete: SetNull)
+  repliedByUser User?           @relation("CustomerOptionClarificationReplier", fields: [repliedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([optionId, askedAt])
+  @@index([customerId, askedAt])
+  @@map("customer_option_clarifications")
+}
+
+model OptionAcceptance {
+  id                      String    @id @default(uuid()) @db.Uuid
+  optionId                String    @unique @db.Uuid
+  requestId               String    @db.Uuid
+  customerId              String    @db.Uuid
+  idempotencyKey          String
+  optionRevision          Int
+  currency                String
+  customerItemsTotal      Decimal   @db.Decimal(12, 2)
+  deliveryCharge          Decimal   @db.Decimal(12, 2)
+  priorityCharge          Decimal   @db.Decimal(12, 2)
+  customerTotal           Decimal   @db.Decimal(12, 2)
+  deliverySnapshot        Json
+  acceptedAt              DateTime  @default(now())
+  allocationReleasedAt    DateTime?
+  allocationReleaseReason String?
+  createdAt               DateTime  @default(now())
+
+  option            SourcingOption          @relation(fields: [optionId], references: [id], onDelete: Restrict)
+  request           SourcingRequest         @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  customer          CustomerProfile         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items             OptionAcceptanceItem[]
+  order             Order?
+  conversionAttempt OrderConversionAttempt?
+
+  @@unique([customerId, idempotencyKey])
+  @@index([requestId, acceptedAt])
+  @@map("option_acceptances")
+}
+
+model OptionAcceptanceItem {
+  id                  String           @id @default(uuid()) @db.Uuid
+  acceptanceId        String           @db.Uuid
+  requestItemId       String           @db.Uuid
+  optionLineId        String           @db.Uuid
+  quotationItemId     String           @db.Uuid
+  description         String
+  brand               String?
+  partNumber          String?
+  condition           ProductCondition
+  quantity            Int
+  customerUnitPrice   Decimal          @db.Decimal(12, 2)
+  customerLineTotal   Decimal          @db.Decimal(12, 2)
+  compatibilityNotes  String?
+  alternativePartInfo String?
+  isAlternative       Boolean
+  createdAt           DateTime         @default(now())
+
+  acceptance    OptionAcceptance    @relation(fields: [acceptanceId], references: [id], onDelete: Restrict)
+  requestItem   SourcingRequestItem @relation(fields: [requestItemId], references: [id], onDelete: Restrict)
+  optionLine    SourcingOptionLine  @relation(fields: [optionLineId], references: [id], onDelete: Restrict)
+  quotationItem QuotationItem       @relation(fields: [quotationItemId], references: [id], onDelete: Restrict)
+  orderItem     OrderItem?
+
+  @@unique([acceptanceId, requestItemId])
+  @@index([requestItemId])
+  @@map("option_acceptance_items")
+}
+
+// ---------------------------------------------------------------------------
+// Orders and fulfillment
+// ---------------------------------------------------------------------------
+
+model Order {
+  id                              String                  @id @default(uuid()) @db.Uuid
+  /// Human-readable order number (e.g. ORD-1045). Generated by application services later.
+  orderNumber                     String                  @unique
+  acceptanceId                    String?                 @unique @db.Uuid
+  customerId                      String                  @db.Uuid
+  businessId                      String                  @db.Uuid
+  requestId                       String?                 @db.Uuid
+  quotationId                     String?                 @db.Uuid
+  deliveryAddressId               String?                 @db.Uuid
+  status                          OrderStatus             @default(CONFIRMED)
+  version                         Int                     @default(0)
+  currency                        String                  @default("BDT")
+  supplierSubtotal                Decimal                 @db.Decimal(12, 2)
+  platformMargin                  Decimal                 @default(0) @db.Decimal(12, 2)
+  deliveryCharge                  Decimal                 @default(0) @db.Decimal(12, 2)
+  priorityCharge                  Decimal                 @default(0) @db.Decimal(12, 2)
+  customerTotal                   Decimal                 @db.Decimal(12, 2)
+  supplierPayable                 Decimal                 @db.Decimal(12, 2)
+  deliverySnapshot                Json?
+  externalSourcingRequired        Boolean                 @default(false)
+  supplierAvailabilityConfirmedAt DateTime?
+  supplierAvailabilityConfirmedBy String?                 @db.Uuid
+  urgentEligibility               UrgentEligibilityStatus @default(NOT_APPLICABLE)
+  urgentEligibilityBasis          String?
+  estimatedWindowStart            DateTime?
+  estimatedWindowEnd              DateTime?
+  targetDeadlineAt                DateTime?
+  confirmedAt                     DateTime?
+  completedAt                     DateTime?
+  cancelledAt                     DateTime?
+  createdAt                       DateTime                @default(now())
+  updatedAt                       DateTime                @updatedAt
+
+  customer              CustomerProfile            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  acceptance            OptionAcceptance?          @relation(fields: [acceptanceId], references: [id], onDelete: Restrict)
+  business              SupplierBusiness           @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  request               SourcingRequest?           @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  quotation             Quotation?                 @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  deliveryAddress       CustomerAddress?           @relation(fields: [deliveryAddressId], references: [id], onDelete: SetNull)
+  items                 OrderItem[]
+  fulfillmentHistory    FulfillmentStatusHistory[]
+  delivery              Delivery?
+  invoices              Invoice[]
+  transactions          Transaction[]
+  settlements           SupplierSettlement[]
+  refunds               Refund[]
+  payable               SupplierPayable?
+  operationalCases      OperationalCase[]
+  conversations         Conversation[]
+  conversionAttempt     OrderConversionAttempt?
+  cancellations         OrderCancellationRequest[]
+  failures              OrderFailure[]
+  return                OrderReturn?
+  urgentHistory         UrgentFulfillmentHistory[]
+  commissionReservation CommissionReservation?
+  walletEntries         WalletLedgerEntry[]
+
+  @@index([customerId, createdAt])
+  @@index([businessId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([quotationId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                  String            @id @default(uuid()) @db.Uuid
+  orderId             String            @db.Uuid
+  acceptanceItemId    String?           @unique @db.Uuid
+  requestItemId       String?           @db.Uuid
+  quotationItemId     String?           @db.Uuid
+  productId           String?           @db.Uuid
+  inventoryId         String?           @db.Uuid
+  lineNumber          Int
+  description         String
+  brand               String?
+  partNumber          String?
+  condition           ProductCondition?
+  compatibilityNotes  String?
+  alternativePartInfo String?
+  isAlternative       Boolean           @default(false)
+  quantity            Int               @default(1)
+  supplierUnitPrice   Decimal           @db.Decimal(12, 2)
+  customerUnitPrice   Decimal           @db.Decimal(12, 2)
+  supplierLineTotal   Decimal           @db.Decimal(12, 2)
+  customerLineTotal   Decimal           @db.Decimal(12, 2)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  order          Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  acceptanceItem OptionAcceptanceItem? @relation(fields: [acceptanceItemId], references: [id], onDelete: Restrict)
+  requestItem    SourcingRequestItem?  @relation(fields: [requestItemId], references: [id], onDelete: SetNull)
+  quotationItem  QuotationItem?        @relation(fields: [quotationItemId], references: [id], onDelete: SetNull)
+  product        Product?              @relation(fields: [productId], references: [id], onDelete: SetNull)
+  inventory      SupplierInventory?    @relation(fields: [inventoryId], references: [id], onDelete: SetNull)
+  invoiceItems   InvoiceItem[]
+  reservation    InventoryReservation?
+
+  @@unique([orderId, lineNumber])
+  @@index([orderId])
+  @@index([inventoryId])
+  @@map("order_items")
+}
+
+model FulfillmentStatusHistory {
+  id          String       @id @default(uuid()) @db.Uuid
+  orderId     String       @db.Uuid
+  fromStatus  OrderStatus?
+  toStatus    OrderStatus
+  note        String?
+  metadata    Json?
+  actorUserId String?      @db.Uuid
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorUser User? @relation("FulfillmentStatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+  @@map("fulfillment_status_history")
+}
+
+model Delivery {
+  id                   String         @id @default(uuid()) @db.Uuid
+  orderId              String         @unique @db.Uuid
+  pickupLocationId     String?        @db.Uuid
+  status               DeliveryStatus @default(SCHEDULED)
+  courierName          String?
+  courierPhone         String?
+  trackingReference    String?
+  recipientSnapshot    Json?
+  scheduledPickupAt    DateTime?
+  estimatedWindowStart DateTime?
+  estimatedWindowEnd   DateTime?
+  pickedUpAt           DateTime?
+  deliveredAt          DateTime?
+  failureReason        String?
+  notes                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  order          Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  pickupLocation SupplierLocation?       @relation(fields: [pickupLocationId], references: [id], onDelete: SetNull)
+  statusHistory  DeliveryStatusHistory[]
+
+  @@index([status, createdAt])
+  @@map("deliveries")
+}
+
+model DeliveryStatusHistory {
+  id          String          @id @default(uuid()) @db.Uuid
+  deliveryId  String          @db.Uuid
+  fromStatus  DeliveryStatus?
+  toStatus    DeliveryStatus
+  note        String?
+  actorUserId String?         @db.Uuid
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  delivery  Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  actorUser User?    @relation("DeliveryStatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([deliveryId, createdAt])
+  @@map("delivery_status_history")
+}
+
+model OrderConversionAttempt {
+  id             String                @id @default(uuid()) @db.Uuid
+  acceptanceId   String                @unique @db.Uuid
+  orderId        String?               @unique @db.Uuid
+  idempotencyKey String
+  status         OrderConversionStatus
+  exceptionCode  String?
+  exceptionNote  String?
+  attemptedAt    DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  acceptance OptionAcceptance @relation(fields: [acceptanceId], references: [id], onDelete: Restrict)
+  order      Order?           @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([status, attemptedAt])
+  @@map("order_conversion_attempts")
+}
+
+model InventoryReservation {
+  id          String                     @id @default(uuid()) @db.Uuid
+  orderItemId String                     @unique @db.Uuid
+  businessId  String                     @db.Uuid
+  inventoryId String                     @db.Uuid
+  quantity    Int
+  status      InventoryReservationStatus @default(ACTIVE)
+  reservedAt  DateTime                   @default(now())
+  releasedAt  DateTime?
+  consumedAt  DateTime?
+  restoredAt  DateTime?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+
+  orderItem OrderItem                   @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  business  SupplierBusiness            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  inventory SupplierInventory           @relation(fields: [inventoryId], references: [id], onDelete: Restrict)
+  history   InventoryReservationEvent[]
+
+  @@index([inventoryId, status])
+  @@index([businessId, status])
+  @@map("inventory_reservations")
+}
+
+model InventoryReservationEvent {
+  id            String                        @id @default(uuid()) @db.Uuid
+  reservationId String                        @db.Uuid
+  eventType     InventoryReservationEventType
+  quantity      Int
+  reason        String?
+  actorUserId   String?                       @db.Uuid
+  createdAt     DateTime                      @default(now())
+
+  reservation InventoryReservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  actorUser   User?                @relation("InventoryReservationEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([reservationId, createdAt])
+  @@map("inventory_reservation_events")
+}
+
+model OrderCancellationRequest {
+  id                String                  @id @default(uuid()) @db.Uuid
+  orderId           String                  @db.Uuid
+  customerId        String                  @db.Uuid
+  status            OrderCancellationStatus @default(PENDING)
+  reason            String
+  requestedByUserId String                  @db.Uuid
+  requestedAt       DateTime                @default(now())
+  decisionReason    String?
+  decidedByUserId   String?                 @db.Uuid
+  decidedAt         DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer    CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  requestedBy User            @relation("OrderCancellationRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  decidedBy   User?           @relation("OrderCancellationDecisionActor", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, status])
+  @@index([customerId, requestedAt])
+  @@map("order_cancellation_requests")
+}
+
+model OrderFailure {
+  id                  String   @id @default(uuid()) @db.Uuid
+  orderId             String   @db.Uuid
+  code                String
+  reason              String
+  releaseReservations Boolean  @default(false)
+  reportedByUserId    String   @db.Uuid
+  reportedAt          DateTime @default(now())
+
+  order      Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  reportedBy User  @relation("OrderFailureReporter", fields: [reportedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, reportedAt])
+  @@map("order_failures")
+}
+
+model OrderReturn {
+  id                String            @id @default(uuid()) @db.Uuid
+  orderId           String            @unique @db.Uuid
+  customerId        String            @db.Uuid
+  status            OrderReturnStatus @default(REQUESTED)
+  reason            String
+  requestedByUserId String            @db.Uuid
+  requestedAt       DateTime          @default(now())
+  decisionReason    String?
+  decidedByUserId   String?           @db.Uuid
+  decidedAt         DateTime?
+  receivedByUserId  String?           @db.Uuid
+  receivedAt        DateTime?
+  inspectionNote    String?
+  restocked         Boolean?
+  inspectedAt       DateTime?
+  refundRequired    Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  order            Order             @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer         CustomerProfile   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  requestedBy      User              @relation("OrderReturnRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  decidedBy        User?             @relation("OrderReturnDecisionActor", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  receivedBy       User?             @relation("OrderReturnReceiver", fields: [receivedByUserId], references: [id], onDelete: SetNull)
+  supplierRecovery SupplierRecovery?
+
+  @@index([customerId, requestedAt])
+  @@map("order_returns")
+}
+
+model UrgentFulfillmentHistory {
+  id                   String                   @id @default(uuid()) @db.Uuid
+  orderId              String                   @db.Uuid
+  fromEligibility      UrgentEligibilityStatus?
+  toEligibility        UrgentEligibilityStatus
+  basis                String
+  estimatedWindowStart DateTime?
+  estimatedWindowEnd   DateTime?
+  targetDeadlineAt     DateTime?
+  actorUserId          String                   @db.Uuid
+  createdAt            DateTime                 @default(now())
+
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  actorUser User  @relation("UrgentFulfillmentActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@map("urgent_fulfillment_history")
+}
+
+// ---------------------------------------------------------------------------
+// Financial records
+// ---------------------------------------------------------------------------
+
+model Transaction {
+  id                   String          @id @default(uuid()) @db.Uuid
+  /// Human-readable transaction reference. Generated by application services later.
+  reference            String          @unique
+  type                 TransactionType
+  status               PaymentStatus   @default(PENDING)
+  customerId           String?         @db.Uuid
+  orderId              String?         @db.Uuid
+  invoiceId            String?         @db.Uuid
+  settlementId         String?         @db.Uuid
+  refundId             String?         @db.Uuid
+  businessId           String?         @db.Uuid
+  recordedByUserId     String?         @db.Uuid
+  reversalOfId         String?         @unique @db.Uuid
+  idempotencyKey       String?         @unique
+  externalReferenceKey String?         @unique
+  amount               Decimal         @db.Decimal(12, 2)
+  currency             String          @default("BDT")
+  method               String?
+  externalReference    String?
+  description          String?
+  safeNote             String?
+  occurredAt           DateTime?
+  processedAt          DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  customer   CustomerProfile?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order      Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  invoice    Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  settlement SupplierSettlement? @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+  refund     Refund?             @relation(fields: [refundId], references: [id], onDelete: SetNull)
+  business   SupplierBusiness?   @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  recordedBy User?               @relation("TransactionRecorder", fields: [recordedByUserId], references: [id], onDelete: SetNull)
+  reversalOf Transaction?        @relation("TransactionReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversal   Transaction?        @relation("TransactionReversal")
+
+  @@index([type, status, createdAt])
+  @@index([customerId, createdAt])
+  @@index([orderId])
+  @@index([businessId, createdAt])
+  @@index([invoiceId, type])
+  @@index([refundId])
+  @@map("transactions")
+}
+
+model Invoice {
+  id               String        @id @default(uuid()) @db.Uuid
+  /// Human-readable invoice number. Generated by application services later.
+  invoiceNumber    String        @unique
+  customerId       String        @db.Uuid
+  orderId          String?       @unique @db.Uuid
+  issuedByUserId   String?       @db.Uuid
+  voidedByUserId   String?       @db.Uuid
+  status           InvoiceStatus @default(DRAFT)
+  subtotal         Decimal       @db.Decimal(12, 2)
+  deliveryCharge   Decimal       @default(0) @db.Decimal(12, 2)
+  priorityCharge   Decimal       @default(0) @db.Decimal(12, 2)
+  total            Decimal       @db.Decimal(12, 2)
+  currency         String        @default("BDT")
+  issuedAt         DateTime?
+  dueAt            DateTime?
+  paidAt           DateTime?
+  voidedAt         DateTime?
+  voidReason       String?
+  sellerSnapshot   Json?
+  customerSnapshot Json?
+  deliverySnapshot Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  customer     CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  order        Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  items        InvoiceItem[]
+  transactions Transaction[]
+  issuedBy     User?           @relation("InvoiceIssuer", fields: [issuedByUserId], references: [id], onDelete: SetNull)
+  voidedBy     User?           @relation("InvoiceVoidActor", fields: [voidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+  @@index([status, createdAt])
+  @@index([orderId])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  invoiceId   String   @db.Uuid
+  orderItemId String?  @db.Uuid
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  lineTotal   Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  invoice   Invoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  orderItem OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model SupplierSettlement {
+  id                   String           @id @default(uuid()) @db.Uuid
+  reference            String?          @unique
+  businessId           String           @db.Uuid
+  orderId              String?          @db.Uuid
+  recordedByUserId     String?          @db.Uuid
+  idempotencyKey       String?          @unique
+  externalReferenceKey String?          @unique
+  status               SettlementStatus @default(PENDING)
+  grossAmount          Decimal          @db.Decimal(12, 2)
+  platformFee          Decimal          @default(0) @db.Decimal(12, 2)
+  netPayable           Decimal          @db.Decimal(12, 2)
+  currency             String           @default("BDT")
+  scheduledFor         DateTime?
+  paidAt               DateTime?
+  occurredAt           DateTime?
+  method               String?
+  externalReference    String?
+  notes                String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  business     SupplierBusiness       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  order        Order?                 @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  transactions Transaction[]
+  allocations  SettlementAllocation[]
+  recordedBy   User?                  @relation("SettlementRecorder", fields: [recordedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status, createdAt])
+  @@index([orderId])
+  @@map("supplier_settlements")
+}
+
+model SupplierPayable {
+  id             String                @id @default(uuid()) @db.Uuid
+  orderId        String                @unique @db.Uuid
+  businessId     String                @db.Uuid
+  status         SupplierPayableStatus @default(OPEN)
+  originalAmount Decimal               @db.Decimal(12, 2)
+  recoveryAmount Decimal               @default(0) @db.Decimal(12, 2)
+  eligibleAt     DateTime
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  order       Order                  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  business    SupplierBusiness       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  allocations SettlementAllocation[]
+  recoveries  SupplierRecovery[]
+
+  @@index([businessId, status, eligibleAt])
+  @@map("supplier_payables")
+}
+
+model SettlementAllocation {
+  id           String   @id @default(uuid()) @db.Uuid
+  settlementId String   @db.Uuid
+  payableId    String   @db.Uuid
+  amount       Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+
+  settlement SupplierSettlement @relation(fields: [settlementId], references: [id], onDelete: Restrict)
+  payable    SupplierPayable    @relation(fields: [payableId], references: [id], onDelete: Restrict)
+
+  @@unique([settlementId, payableId])
+  @@index([payableId])
+  @@map("settlement_allocations")
+}
+
+model SupplierRecovery {
+  id            String   @id @default(uuid()) @db.Uuid
+  payableId     String   @db.Uuid
+  orderReturnId String   @unique @db.Uuid
+  amount        Decimal  @db.Decimal(12, 2)
+  reason        String
+  createdAt     DateTime @default(now())
+
+  payable     SupplierPayable @relation(fields: [payableId], references: [id], onDelete: Restrict)
+  orderReturn OrderReturn     @relation(fields: [orderReturnId], references: [id], onDelete: Restrict)
+
+  @@index([payableId])
+  @@map("supplier_recoveries")
+}
+
+model Refund {
+  id                   String       @id @default(uuid()) @db.Uuid
+  customerId           String       @db.Uuid
+  orderId              String?      @db.Uuid
+  status               RefundStatus @default(REQUESTED)
+  amount               Decimal      @db.Decimal(12, 2)
+  currency             String       @default("BDT")
+  reason               String?
+  idempotencyKey       String?      @unique
+  approvedByUserId     String?      @db.Uuid
+  approvedAt           DateTime?
+  processedByUserId    String?      @db.Uuid
+  method               String?
+  externalReference    String?
+  externalReferenceKey String?      @unique
+  processedAt          DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  customer     CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  order        Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  transactions Transaction[]
+  approvedBy   User?           @relation("RefundApprover", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  processedBy  User?           @relation("RefundProcessor", fields: [processedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, status])
+  @@index([orderId])
+  @@map("refunds")
+}
+
+model PlatformBusinessConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  configKey       String   @unique @default("default")
+  legalName       String
+  tradingName     String
+  address         String
+  phone           String?
+  email           String?
+  taxIdentifier   String?
+  isPlaceholder   Boolean  @default(true)
+  updatedByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  updatedBy User? @relation("BusinessConfigUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@map("platform_business_config")
+}
+
+// ---------------------------------------------------------------------------
+// Supplier prepaid credits and commission accounting
+// ---------------------------------------------------------------------------
+
+model CommissionPolicy {
+  id              String    @id @default(uuid()) @db.Uuid
+  rateBps         Int
+  isActive        Boolean   @default(true)
+  reason          String
+  effectiveFrom   DateTime  @default(now())
+  endedAt         DateTime?
+  createdByUserId String    @db.Uuid
+  createdAt       DateTime  @default(now())
+
+  createdBy    User                    @relation("CommissionPolicyCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reservations CommissionReservation[]
+
+  @@index([isActive, effectiveFrom])
+  @@map("commission_policies")
+}
+
+model SupplierWallet {
+  id              String               @id @default(uuid()) @db.Uuid
+  businessId      String               @unique @db.Uuid
+  status          SupplierWalletStatus @default(ACTIVE)
+  availableCredit Decimal              @default(0) @db.Decimal(14, 2)
+  reservedCredit  Decimal              @default(0) @db.Decimal(14, 2)
+  version         Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  business     SupplierBusiness        @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  topUps       WalletTopUp[]
+  entries      WalletLedgerEntry[]
+  reservations CommissionReservation[]
+
+  @@index([status, updatedAt])
+  @@map("supplier_wallets")
+}
+
+model WalletTopUp {
+  id                String            @id @default(uuid()) @db.Uuid
+  walletId          String            @db.Uuid
+  businessId        String            @db.Uuid
+  amount            Decimal           @db.Decimal(14, 2)
+  currency          String            @default("BDT")
+  status            WalletTopUpStatus @default(PENDING)
+  paymentMethod     String
+  externalReference String
+  evidenceReference String?
+  supplierNote      String?
+  decisionReason    String?
+  requestedByUserId String            @db.Uuid
+  reviewedByUserId  String?           @db.Uuid
+  idempotencyKey    String            @unique
+  requestedAt       DateTime          @default(now())
+  reviewedAt        DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  wallet      SupplierWallet      @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  business    SupplierBusiness    @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  requestedBy User                @relation("WalletTopUpCreator", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  reviewedBy  User?               @relation("WalletTopUpReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  entries     WalletLedgerEntry[]
+
+  @@unique([businessId, externalReference])
+  @@index([status, requestedAt])
+  @@index([businessId, requestedAt])
+  @@map("wallet_top_ups")
+}
+
+model CommissionReservation {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  walletId            String                      @db.Uuid
+  businessId          String                      @db.Uuid
+  orderId             String                      @unique @db.Uuid
+  policyId            String                      @db.Uuid
+  status              CommissionReservationStatus @default(RESERVED)
+  eligibleAmount      Decimal                     @db.Decimal(14, 2)
+  commissionRateBps   Int
+  commissionAmount    Decimal                     @db.Decimal(14, 2)
+  currency            String                      @default("BDT")
+  idempotencyKey      String                      @unique
+  reservedAt          DateTime                    @default(now())
+  settledAt           DateTime?
+  releasedAt          DateTime?
+  reversedAt          DateTime?
+  settlementReference String?
+  releaseReason       String?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+
+  wallet   SupplierWallet      @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  business SupplierBusiness    @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  order    Order               @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  policy   CommissionPolicy    @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  entries  WalletLedgerEntry[]
+
+  @@index([businessId, status, createdAt])
+  @@index([status, createdAt])
+  @@map("commission_reservations")
+}
+
+model WalletLedgerEntry {
+  id               String          @id @default(uuid()) @db.Uuid
+  walletId         String          @db.Uuid
+  businessId       String          @db.Uuid
+  type             WalletEntryType
+  availableDelta   Decimal         @default(0) @db.Decimal(14, 2)
+  reservedDelta    Decimal         @default(0) @db.Decimal(14, 2)
+  availableBalance Decimal         @db.Decimal(14, 2)
+  reservedBalance  Decimal         @db.Decimal(14, 2)
+  topUpId          String?         @db.Uuid
+  reservationId    String?         @db.Uuid
+  orderId          String?         @db.Uuid
+  actorUserId      String?         @db.Uuid
+  reversalOfId     String?         @unique @db.Uuid
+  idempotencyKey   String          @unique
+  reason           String
+  metadata         Json?
+  createdAt        DateTime        @default(now())
+
+  wallet      SupplierWallet         @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  business    SupplierBusiness       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  topUp       WalletTopUp?           @relation(fields: [topUpId], references: [id], onDelete: Restrict)
+  reservation CommissionReservation? @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  order       Order?                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  actorUser   User?                  @relation("WalletEntryActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  reversalOf  WalletLedgerEntry?     @relation("WalletEntryReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversal    WalletLedgerEntry?     @relation("WalletEntryReversal")
+
+  @@index([walletId, createdAt])
+  @@index([businessId, type, createdAt])
+  @@index([orderId])
+  @@map("wallet_ledger_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Supplier subscriptions and category governance
+// ---------------------------------------------------------------------------
+
+model SubscriptionPlan {
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String    @unique
+  durationMonths Int
+  price          Decimal   @db.Decimal(12, 2)
+  currency       String    @default("BDT")
+  isActive       Boolean   @default(true)
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  subscriptions SupplierSubscription[]
+  invoices      SubscriptionInvoice[]
+
+  @@index([isActive, durationMonths])
+  @@map("subscription_plans")
+}
+
+model SupplierSubscription {
+  id                     String                     @id @default(uuid()) @db.Uuid
+  businessId             String                     @db.Uuid
+  planId                 String?                    @db.Uuid
+  status                 SupplierSubscriptionStatus @default(PENDING)
+  planNameSnapshot       String
+  durationMonthsSnapshot Int
+  priceSnapshot          Decimal                    @db.Decimal(12, 2)
+  currency               String                     @default("BDT")
+  startsAt               DateTime
+  endsAt                 DateTime
+  activatedAt            DateTime?
+  suspendedAt            DateTime?
+  cancelledAt            DateTime?
+  complimentaryReason    String?
+  statusReason           String?
+  createdByUserId        String                     @db.Uuid
+  idempotencyKey         String                     @unique
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+
+  business  SupplierBusiness            @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  plan      SubscriptionPlan?           @relation(fields: [planId], references: [id], onDelete: SetNull)
+  createdBy User                        @relation("SubscriptionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  invoice   SubscriptionInvoice?
+  history   SupplierSubscriptionEvent[]
+
+  @@index([businessId, status, startsAt, endsAt])
+  @@index([endsAt, status])
+  @@map("supplier_subscriptions")
+}
+
+model SupplierSubscriptionEvent {
+  id             String                      @id @default(uuid()) @db.Uuid
+  subscriptionId String                      @db.Uuid
+  fromStatus     SupplierSubscriptionStatus?
+  toStatus       SupplierSubscriptionStatus
+  reason         String?
+  actorUserId    String                      @db.Uuid
+  createdAt      DateTime                    @default(now())
+
+  subscription SupplierSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  actorUser    User                 @relation("SubscriptionEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([subscriptionId, createdAt])
+  @@map("supplier_subscription_events")
+}
+
+model SubscriptionInvoice {
+  id                     String                    @id @default(uuid()) @db.Uuid
+  invoiceNumber          String                    @unique
+  businessId             String                    @db.Uuid
+  planId                 String?                   @db.Uuid
+  subscriptionId         String?                   @unique @db.Uuid
+  status                 SubscriptionInvoiceStatus @default(ISSUED)
+  planNameSnapshot       String
+  durationMonthsSnapshot Int
+  amount                 Decimal                   @db.Decimal(12, 2)
+  currency               String                    @default("BDT")
+  periodStartsAt         DateTime
+  periodEndsAt           DateTime
+  issuedAt               DateTime
+  dueAt                  DateTime
+  paidAt                 DateTime?
+  voidedAt               DateTime?
+  voidReason             String?
+  sellerSnapshot         Json
+  supplierSnapshot       Json
+  issuedByUserId         String                    @db.Uuid
+  voidedByUserId         String?                   @db.Uuid
+  idempotencyKey         String                    @unique
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+
+  business     SupplierBusiness      @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  plan         SubscriptionPlan?     @relation(fields: [planId], references: [id], onDelete: SetNull)
+  subscription SupplierSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  payments     SubscriptionPayment[]
+  issuedBy     User                  @relation("SubscriptionInvoiceIssuer", fields: [issuedByUserId], references: [id], onDelete: Restrict)
+  voidedBy     User?                 @relation("SubscriptionInvoiceVoidActor", fields: [voidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status, issuedAt])
+  @@map("subscription_invoices")
+}
+
+model SubscriptionPayment {
+  id                   String                  @id @default(uuid()) @db.Uuid
+  invoiceId            String                  @db.Uuid
+  kind                 SubscriptionPaymentKind @default(PAYMENT)
+  amount               Decimal                 @db.Decimal(12, 2)
+  currency             String                  @default("BDT")
+  method               String
+  externalReference    String?
+  externalReferenceKey String?                 @unique
+  occurredAt           DateTime
+  safeNote             String?
+  reversalOfId         String?                 @unique @db.Uuid
+  recordedByUserId     String                  @db.Uuid
+  idempotencyKey       String                  @unique
+  createdAt            DateTime                @default(now())
+
+  invoice    SubscriptionInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  reversalOf SubscriptionPayment? @relation("SubscriptionPaymentReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversal   SubscriptionPayment? @relation("SubscriptionPaymentReversal")
+  recordedBy User                 @relation("SubscriptionPaymentRecorder", fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([invoiceId, kind, createdAt])
+  @@map("subscription_payments")
+}
+
+model SupplierCategoryRequest {
+  id                 String                @id @default(uuid()) @db.Uuid
+  businessId         String                @db.Uuid
+  proposedName       String
+  normalizedName     String
+  proposedParentId   String?               @db.Uuid
+  description        String?
+  justification      String
+  status             CategoryRequestStatus @default(PENDING)
+  approvedCategoryId String?               @db.Uuid
+  decisionReason     String?
+  createdByUserId    String                @db.Uuid
+  reviewedByUserId   String?               @db.Uuid
+  reviewedAt         DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  business         SupplierBusiness @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  proposedParent   PartCategory?    @relation("CategoryRequestProposedParent", fields: [proposedParentId], references: [id], onDelete: SetNull)
+  approvedCategory PartCategory?    @relation("CategoryRequestApprovedCategory", fields: [approvedCategoryId], references: [id], onDelete: SetNull)
+  createdBy        User             @relation("CategoryRequestCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reviewedBy       User?            @relation("CategoryRequestReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([businessId, status, createdAt])
+  @@map("supplier_category_requests")
+}
+
+model OperationalCase {
+  id               String                @id @default(uuid()) @db.Uuid
+  caseNumber       String                @unique
+  type             OperationalCaseType
+  status           OperationalCaseStatus @default(OPEN)
+  orderId          String?               @db.Uuid
+  businessId       String?               @db.Uuid
+  assignedToUserId String?               @db.Uuid
+  title            String
+  resolution       String?
+  resolvedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  order      Order?                   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  business   SupplierBusiness?        @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  assignedTo User?                    @relation("OperationalCaseAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  history    OperationalCaseHistory[]
+
+  @@index([status, type, createdAt])
+  @@index([assignedToUserId, status])
+  @@map("operational_cases")
+}
+
+model OperationalCaseHistory {
+  id          String                 @id @default(uuid()) @db.Uuid
+  caseId      String                 @db.Uuid
+  fromStatus  OperationalCaseStatus?
+  toStatus    OperationalCaseStatus
+  note        String
+  actorUserId String                 @db.Uuid
+  createdAt   DateTime               @default(now())
+
+  case      OperationalCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  actorUser User            @relation("OperationalCaseHistoryActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, createdAt])
+  @@map("operational_case_history")
+}
+
+// ---------------------------------------------------------------------------
+// Communication and operations
+// ---------------------------------------------------------------------------
+
+model Conversation {
+  id            String           @id @default(uuid()) @db.Uuid
+  scopeKey      String           @unique
+  type          ConversationType @default(GENERAL)
+  subject       String?
+  requestId     String?          @db.Uuid
+  quotationId   String?          @db.Uuid
+  orderId       String?          @db.Uuid
+  customerId    String?          @db.Uuid
+  businessId    String?          @db.Uuid
+  isClosed      Boolean          @default(false)
+  lastMessageAt DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  request      SourcingRequest?          @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  quotation    Quotation?                @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  order        Order?                    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  customer     CustomerProfile?          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  business     SupplierBusiness?         @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([requestId])
+  @@index([quotationId])
+  @@index([orderId])
+  @@index([customerId, lastMessageAt])
+  @@index([businessId, lastMessageAt])
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id                String          @id @default(uuid()) @db.Uuid
+  conversationId    String          @db.Uuid
+  userId            String          @db.Uuid
+  participantType   ParticipantType
+  lastReadAt        DateTime?
+  lastReadMessageId String?         @db.Uuid
+  joinedAt          DateTime        @default(now())
+  leftAt            DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String            @id @default(uuid()) @db.Uuid
+  conversationId String            @db.Uuid
+  senderUserId   String?           @db.Uuid
+  senderType     MessageSenderType
+  idempotencyKey String?
+  sourceType     String?
+  sourceId       String?           @db.Uuid
+  body           String
+  sentAt         DateTime          @default(now())
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  conversation Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderUser   User?               @relation(fields: [senderUserId], references: [id], onDelete: SetNull)
+  attachments  MessageAttachment[]
+
+  @@unique([conversationId, senderUserId, idempotencyKey])
+  @@unique([conversationId, sourceType, sourceId])
+  @@index([conversationId, sentAt])
+  @@index([senderUserId])
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id            String         @id @default(uuid()) @db.Uuid
+  messageId     String         @db.Uuid
+  kind          AttachmentKind @default(DOCUMENT)
+  fileName      String
+  mimeType      String
+  storageKey    String
+  byteSize      Int?
+  width         Int?
+  height        Int?
+  contentSha256 String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+model Notification {
+  id         String              @id @default(uuid()) @db.Uuid
+  userId     String              @db.Uuid
+  channel    NotificationChannel @default(IN_APP)
+  title      String
+  body       String
+  entityType String?
+  entityId   String?             @db.Uuid
+  eventKey   String
+  isRead     Boolean             @default(false)
+  readAt     DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@unique([userId, channel, eventKey])
+  @@index([userId, isRead, createdAt])
+  @@index([entityType, entityId])
+  @@map("notifications")
+}
+
+model NotificationDelivery {
+  id             String                     @id @default(uuid()) @db.Uuid
+  notificationId String                     @db.Uuid
+  userId         String                     @db.Uuid
+  channel        NotificationChannel
+  status         NotificationDeliveryStatus @default(PENDING)
+  attempts       Int                        @default(0)
+  nextAttemptAt  DateTime                   @default(now())
+  deliveredAt    DateTime?
+  lastErrorCode  String?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, channel])
+  @@index([status, nextAttemptAt])
+  @@map("notification_deliveries")
+}
+
+model OutboxEvent {
+  id            String       @id @default(uuid()) @db.Uuid
+  eventType     String
+  aggregateType String
+  aggregateId   String       @db.Uuid
+  eventKey      String       @unique
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  maxAttempts   Int          @default(8)
+  availableAt   DateTime     @default(now())
+  lockedAt      DateTime?
+  processedAt   DateTime?
+  lastErrorCode String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status, availableAt, createdAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @db.Uuid
+  action      String
+  entityType  String
+  entityId    String?  @db.Uuid
+  /// Safe metadata only — never store secrets, hashes, or raw auth tokens.
+  metadata    Json?
+  requestId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  actorUser User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([requestId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
