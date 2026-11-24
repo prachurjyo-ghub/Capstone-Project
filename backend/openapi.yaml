@@ -1,0 +1,526 @@
+openapi: 3.1.0
+info:
+  title: PartsArc API
+  version: 6.0.0
+  description: Executable entry-point specification. Detailed domain contracts are linked under externalDocs.
+externalDocs:
+  description: PartsArc backend contract documentation
+  url: ./docs/admin-commerce-api.md
+servers:
+  - url: http://localhost:4000/api/v1
+paths:
+  /health:
+    get:
+      operationId: health
+      responses:
+        "200": { description: Process health }
+  /health/readiness:
+    get:
+      operationId: readiness
+      responses:
+        "200": { description: Database, Redis, worker heartbeat and outbox readiness }
+        "503": { description: Database unavailable }
+  /auth/login:
+    post:
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200": { description: Access token plus rotating refresh and CSRF cookies }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Password changed and other sessions revoked }
+        "400": { $ref: "#/components/responses/Error" }
+  /admin/suppliers/{businessId}/owner-account:
+    post:
+      operationId: createSupplierOwnerAccount
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessPathId" }]
+      responses:
+        "201": { description: Initial owner created with mandatory credential change }
+        "409": { $ref: "#/components/responses/Error" }
+  /admin/suppliers/{businessId}/members/{membershipId}/temporary-password:
+    post:
+      operationId: resetSupplierMemberTemporaryPassword
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/BusinessPathId" }
+        - { $ref: "#/components/parameters/MembershipPathId" }
+      responses:
+        "200": { description: Temporary password set and active sessions revoked }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/subscriptions/plans:
+    get:
+      operationId: listSubscriptionPlans
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Bounded subscription-plan page }
+    post:
+      operationId: createSubscriptionPlan
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Created 1, 4 or 12 calendar-month BDT plan }
+  /admin/subscriptions/invoices:
+    get:
+      operationId: listSubscriptionInvoices
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Separate supplier-subscription invoice page }
+    post:
+      operationId: issueSubscriptionInvoice
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Immutable plan, period and identity snapshot }
+  /admin/subscriptions/invoices/{invoiceId}/payments:
+    post:
+      operationId: recordSubscriptionExternalPayment
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/InvoicePathId" }]
+      responses:
+        "201":
+          { description: External receipt recorded; full payment activates entitlement }
+        "409": { $ref: "#/components/responses/Error" }
+  /supplier/subscriptions/invoices:
+    get:
+      operationId: listOwnSubscriptionInvoices
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "200": { description: Owner-only private subscription billing history }
+  /supplier/subscriptions/current:
+    get:
+      operationId: getSupplierCurrentSubscription
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "200": { description: Membership-scoped current subscription summary }
+  /supplier/subscriptions/category-requests:
+    get:
+      operationId: listOwnCategoryRequests
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "200": { description: Supplier-scoped category requests }
+    post:
+      operationId: createCategoryRequest
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "201": { description: Pending global-category proposal }
+        "409": { $ref: "#/components/responses/Error" }
+  /admin/catalogue/category-requests/{id}/decision:
+    post:
+      operationId: decideCategoryRequest
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PathId" }]
+      responses:
+        "200": { description: Request approved to new/existing category or rejected }
+        "409": { $ref: "#/components/responses/Error" }
+  /supplier/catalogue/products:
+    get:
+      operationId: supplierCatalogue
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/BusinessId"
+        - { name: search, in: query, schema: { type: string, maxLength: 120 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - {
+            name: pageSize,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100 },
+          }
+      responses:
+        "200": { description: Active shared catalogue page }
+  /catalogue/categories:
+    get:
+      operationId: publicCatalogueCategories
+      parameters:
+        - { name: search, in: query, schema: { type: string, maxLength: 120 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - {
+            name: pageSize,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100 },
+          }
+      responses:
+        "200": { description: Active admin-owned customer discovery categories }
+  /catalogue/products:
+    get:
+      operationId: publicCatalogueProducts
+      parameters:
+        - { name: search, in: query, schema: { type: string, maxLength: 120 } }
+        - { name: categoryId, in: query, schema: { type: string, format: uuid } }
+        - { name: make, in: query, schema: { type: string } }
+        - { name: model, in: query, schema: { type: string } }
+        - {
+            name: year,
+            in: query,
+            schema: { type: integer, minimum: 1900, maximum: 2200 },
+          }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - {
+            name: pageSize,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100 },
+          }
+      responses:
+        "200":
+          {
+            description: Customer-safe active products backed by eligible available supplier offerings; supplier identity and offering IDs excluded,
+          }
+  /catalogue/products/{id}:
+    get:
+      operationId: publicCatalogueProduct
+      parameters: [{ $ref: "#/components/parameters/PathId" }]
+      responses:
+        "200": { description: Customer-safe public product detail }
+        "404": { $ref: "#/components/responses/Error" }
+  /supplier/profile:
+    get:
+      operationId: supplierOwnBusinessProfile
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "200": { description: Real supplier business, locations and member details }
+  /supplier/inventory:
+    get:
+      operationId: supplierInventory
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "200": { description: Membership-scoped inventory page }
+    post:
+      operationId: createInventoryOffering
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "201": { description: Created catalogue-linked offering }
+  /supplier/inventory/{inventoryId}/images:
+    post:
+      operationId: uploadSupplierListingImage
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/BusinessId" }
+        - { $ref: "#/components/parameters/InventoryPathId" }
+      requestBody:
+        required: true
+        content:
+          image/webp: { schema: { type: string, format: binary, maxLength: 2097152 } }
+      responses:
+        "201": { description: Validated listing image metadata with immutable public URL }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "413": { $ref: "#/components/responses/Error" }
+        "415": { description: Non-WebP or otherwise non-normalized upload }
+    patch:
+      operationId: reorderSupplierListingImages
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/BusinessId" }
+        - { $ref: "#/components/parameters/InventoryPathId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [imageIds]
+              properties:
+                imageIds:
+                  type: array
+                  minItems: 1
+                  maxItems: 4
+                  uniqueItems: true
+                  items: { type: string, format: uuid }
+      responses:
+        "200": { description: Contiguous image order with the first image primary }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /supplier/inventory/{inventoryId}/images/{imageId}:
+    put:
+      operationId: replaceSupplierListingImage
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/BusinessId" }
+        - { $ref: "#/components/parameters/InventoryPathId" }
+        - { $ref: "#/components/parameters/ImagePathId" }
+      requestBody:
+        required: true
+        content:
+          image/webp: { schema: { type: string, format: binary, maxLength: 2097152 } }
+      responses:
+        "200": { description: Replaced image with incremented immutable URL version }
+        "404": { $ref: "#/components/responses/Error" }
+        "413": { $ref: "#/components/responses/Error" }
+        "415": { description: Non-WebP or otherwise non-normalized upload }
+    delete:
+      operationId: deleteSupplierListingImage
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/BusinessId" }
+        - { $ref: "#/components/parameters/InventoryPathId" }
+        - { $ref: "#/components/parameters/ImagePathId" }
+      responses:
+        "204": { description: Image removed and remaining order normalized }
+        "409": { $ref: "#/components/responses/Error" }
+  /catalogue/listing-images/{imageId}/{version}:
+    get:
+      operationId: streamPublicListingImage
+      parameters:
+        - { $ref: "#/components/parameters/ImagePathId" }
+        - {
+            name: version,
+            in: path,
+            required: true,
+            schema: { type: string, pattern: "^v[1-9][0-9]*$" },
+          }
+      responses:
+        "200":
+          description: Immutable bytes for an eligible public listing image
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "404": { $ref: "#/components/responses/Error" }
+  /supplier/quotations:
+    get:
+      operationId: supplierQuotations
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "200": { description: Supplier quotation revisions }
+  /customers/me/purchase-requests:
+    post:
+      operationId: createFixedPricePurchaseRequest
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Idempotent purchase request routed to listing supplier }
+        "409": { $ref: "#/components/responses/Error" }
+  /supplier/commerce/purchase-requests:
+    get:
+      operationId: listSupplierPurchaseRequests
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "200": { description: Privacy-safe business-scoped purchase-request queue }
+  /supplier/commerce/purchase-requests/{requestId}/confirm:
+    post:
+      operationId: confirmSupplierPurchaseRequest
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/BusinessId" }
+        - { $ref: "#/components/parameters/RequestPathId" }
+      responses:
+        "200": { description: Order confirmed with atomic commission reservation }
+        "409": { description: Request remains pending when credits are insufficient }
+  /supplier/credits/wallet:
+    get:
+      operationId: getSupplierCreditWallet
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "200": { description: Business-owned balances, top-ups and immutable entries }
+  /supplier/credits/top-ups:
+    post:
+      operationId: submitSupplierWalletTopUp
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessId" }]
+      responses:
+        "201": { description: Pending top-up with payment evidence }
+  /admin/credits/overview:
+    get:
+      operationId: creditOperationsOverview
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Wallet, pending top-up and commission aggregates }
+  /admin/credits/reconciliation:
+    get:
+      operationId: reconcileSupplierCreditWallets
+      description: Super Admin read-only comparison of wallet balances, latest immutable ledger snapshots, and active reservations.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - {
+            name: pageSize,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 20 },
+          }
+      responses:
+        "200":
+          { description: Bounded read-only discrepancy report; never repairs balances }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/credits/policy:
+    get:
+      operationId: getCommissionPolicy
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Active policy and immutable rate history }
+    post:
+      operationId: setCommissionPolicy
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Super Admin creates a new active policy version }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/credits/wallets:
+    get:
+      operationId: listSupplierCreditWallets
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Paginated supplier wallet operations list }
+  /admin/credits/wallets/{businessId}:
+    get:
+      operationId: getAdminSupplierWallet
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/BusinessPathId" }]
+      responses:
+        "200": { description: Supplier wallet reconciliation detail }
+  /admin/credits/top-ups:
+    get:
+      operationId: listWalletTopUps
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Paginated verification queue and history }
+  /admin/credits/top-ups/{id}/decision:
+    post:
+      operationId: decideWalletTopUp
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PathId" }]
+      responses:
+        "200": { description: Idempotent verified approval or rejection }
+  /admin/credits/reservations:
+    get:
+      operationId: listCommissionReservations
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Commission snapshot and lifecycle ledger }
+  /admin/listings:
+    get:
+      operationId: listAdminSupplierListings
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Classified listings with moderation and eligibility }
+  /admin/listings/{id}/moderation:
+    post:
+      operationId: moderateSupplierListing
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PathId" }]
+      responses:
+        "200": { description: Audited approval, flag or rejection }
+  /admin/operations/dashboard:
+    get:
+      operationId: adminOperationsDashboard
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - {
+            name: from,
+            in: query,
+            required: true,
+            schema: { type: string, format: date-time },
+          }
+        - {
+            name: to,
+            in: query,
+            required: true,
+            schema: { type: string, format: date-time },
+          }
+        - { name: timezone, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Bounded real-record operational summary }
+  /admin/jobs/listing-images/reconcile:
+    post:
+      operationId: reconcileListingImageObjects
+      description: Super Admin bounded, cursor-paginated orphan scan. Dry-run defaults to true; apply mode rechecks database references before deletion.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                cursor: { type: string, minLength: 1, maxLength: 2048 }
+                limit: { type: integer, minimum: 1, maximum: 1000 }
+                dryRun: { type: boolean, default: true }
+      responses:
+        "200":
+          { description: Scan counts, candidates, deletions, failures and next cursor }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    BusinessId:
+      name: X-Business-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    PathId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    BusinessPathId:
+      name: businessId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    InventoryPathId:
+      name: inventoryId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ImagePathId:
+      name: imageId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MembershipPathId:
+      name: membershipId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    InvoicePathId:
+      name: invoiceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RequestPathId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Error:
+      description: Safe error envelope
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [success, error, requestId]
+            properties:
+              success: { type: boolean, const: false }
+              error:
+                type: object
+                properties:
+                  code: { type: string }
+                  message: { type: string }
+                  details: { type: array, items: { type: object } }
+              requestId: { type: string }
