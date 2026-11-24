@@ -38,3 +38,9 @@ This checklist is derived from the handoff; the README does not define a separat
 ## Acceptance still needed
 
 The interactive browser walkthrough from the supplier and admin portal screens did not complete. The browser access host was unavailable, and native Chrome control rejected actions while the user changed the app. Therefore supplier invitation activation, portal session restoration, a live request with photo through both operational UIs, listing moderation, and local notification delivery have not been signed off through the portal screens. The automated API suite verifies the underlying role and commerce flows but does not replace that UI check.
+
+## Resumed acceptance and dependency remediation
+
+- Native Chrome control became available. Registered a demo customer, created a supplier business, category and product through the portals, and submitted `RFQ-2026-001000` with a bundled brake photo. The admin request detail and authorized photo viewer displayed the saved record. Customer and admin sessions survived reloads. Unauthenticated admin and customer attachment downloads returned HTTP 401.
+- Supplier-owner invitation to the disposable local `owner@example.test` account is pending action-time approval required by automatic approval review. No owner access has been granted yet.
+- Resolved the previously reported backend dependency findings using scoped `@prisma/config` overrides for `deepmerge-ts` 8.0.2 and `effect` 3.22.5, retaining Prisma 6.19.3. Under Node 22.23.2, Prisma generation, migration status, typecheck, build, all 113 backend tests, lint, and formatting of the changed manifests passed. `npm audit --omit=dev --audit-level=high` now reports zero vulnerabilities.
