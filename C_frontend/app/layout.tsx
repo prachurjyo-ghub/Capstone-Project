@@ -8,8 +8,7 @@ import '@fontsource/dm-sans/latin-500.css';
 import '@fontsource/dm-sans/latin-600.css';
 import '@fontsource/dm-sans/latin-700.css';
 import './globals.css';
-import { SiteProvider } from '@/components/site-context';
-import { SiteShell } from '@/components/site-shell';
+import { StorefrontLayout } from '@/components/storefront-layout';
 
 export const metadata: Metadata = {
   title: 'PartArc — Automotive parts sourcing, organized',
@@ -17,5 +16,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.theme=['dark','\"dark\"'].includes(localStorage.getItem('partarc-theme'))?'dark':'light'}catch{document.documentElement.dataset.theme='light'}" }} /></head><body><SiteProvider><SiteShell>{children}</SiteShell></SiteProvider></body></html>;
+  return <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.theme=['dark','\"dark\"'].includes(localStorage.getItem('partarc-theme'))?'dark':'light'}catch{document.documentElement.dataset.theme='light'}" }} /></head><body><StorefrontLayout>{children}</StorefrontLayout></body></html>;
 }
