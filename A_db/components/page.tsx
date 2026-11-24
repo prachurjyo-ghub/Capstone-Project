@@ -19,7 +19,7 @@ export function PageHeader({
 }) {
   return (
     <div className="mb-7 flex flex-wrap items-end justify-between gap-5">
-      <div>
+      <div className="min-w-0 max-w-full">
         <p className="mb-2 text-[11px] font-black tracking-[.16em] text-muted-foreground">
           {eyebrow}
         </p>

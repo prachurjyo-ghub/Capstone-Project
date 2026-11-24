@@ -93,6 +93,7 @@ textarea {
   color: var(--background);
 }
 .panel {
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--card);

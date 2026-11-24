@@ -4,6 +4,7 @@
 import { use, useMemo, useState } from "react";
 import { Download, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { SnapshotDetails } from "@/components/snapshot-details";
 import { ActionForm } from "@/components/action-form";
 import { ErrorBox, PageHeader } from "@/components/page";
 import { Badge, Button, Empty, Skeleton, Status } from "@/components/ui";
@@ -139,8 +140,14 @@ export default function RequestWorkspace({
           <p className="text-sm text-muted-foreground">
             Sensitive details are visible only to operations.
           </p>
-          <Snapshot title="Vehicle snapshot" value={row.vehicleSnapshot} />
-          <Snapshot title="Delivery snapshot" value={row.deliverySnapshot} />
+          <SnapshotDetails
+            title="Vehicle details"
+            value={row.vehicleSnapshot}
+          />
+          <SnapshotDetails
+            title="Delivery details"
+            value={row.deliverySnapshot}
+          />
         </div>
       </section>
       <section className="panel p-5">
@@ -668,18 +675,6 @@ function Fact({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="mt-1 font-bold">{value}</p>
-    </div>
-  );
-}
-function Snapshot({ title, value }: { title: string; value: unknown }) {
-  return (
-    <div className="mt-4">
-      <p className="text-xs font-bold uppercase text-muted-foreground">
-        {title}
-      </p>
-      <pre className="mt-2 whitespace-pre-wrap rounded-xl bg-muted p-3 text-xs">
-        {value ? JSON.stringify(value, null, 2) : "Not supplied"}
-      </pre>
     </div>
   );
 }

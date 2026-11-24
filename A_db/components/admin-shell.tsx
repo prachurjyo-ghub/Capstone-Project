@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   Bell,
   Boxes,
@@ -69,6 +70,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false),
     [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
   const notifications = useResource<Page>(
     "/communications/notifications?page=1&pageSize=8&unreadOnly=true",
   );
@@ -77,68 +86,50 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       .flatMap((group) => group[1])
       .find((item) => path.startsWith(item[1]))?.[0] ?? "Operations";
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[auto_1fr]">
-      <button
-        aria-label="Close navigation"
-        onClick={() => setOpen(false)}
-        className={`fixed inset-0 z-30 bg-black/40 lg:hidden ${open ? "block" : "hidden"}`}
-      />
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)]">
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r bg-[#242628] text-stone-200 transition-transform lg:sticky lg:top-0 lg:h-screen ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} ${collapsed ? "lg:w-[82px]" : "lg:w-72"}`}
+        className={`hidden h-screen flex-col border-r bg-[#242628] text-stone-200 lg:sticky lg:top-0 lg:flex ${collapsed ? "w-[82px]" : "w-72"}`}
       >
-        <div className="flex h-20 items-center gap-3 border-b border-white/10 px-5">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-stone-100 font-black text-[#242628]">
-            A
-          </span>
-          {!collapsed && (
-            <div>
-              <b className="block tracking-wide">PartsArc</b>
-              <small className="text-stone-400">Operations control</small>
-            </div>
-          )}
-          <button className="ml-auto lg:hidden" onClick={() => setOpen(false)}>
-            <X />
-          </button>
-        </div>
-        <nav className="scrollbar flex-1 overflow-y-auto p-3">
-          {groups.map(([name, items]) => (
-            <div key={name} className="mb-5">
-              {!collapsed && (
-                <p className="mb-2 px-3 text-[10px] font-black tracking-[.16em] text-stone-500">
-                  {name.toUpperCase()}
-                </p>
-              )}
-              {items.map(([label, href, Icon]) => {
-                const active = path.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    title={label}
-                    href={href}
-                    className={`relative mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold ${active ? "bg-white/10 text-white before:absolute before:left-0 before:h-6 before:w-0.5 before:bg-white" : "text-stone-400 hover:bg-white/5 hover:text-white"}`}
-                  >
-                    <Icon size={19} />
-                    {!collapsed && label}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
+        <SidebarBrand collapsed={collapsed} />
+        <AdminNavigation collapsed={collapsed} />
         <div className="border-t border-white/10 p-3">
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden w-full items-center gap-3 rounded-xl p-3 text-sm text-stone-400 hover:bg-white/5 lg:flex"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="flex w-full items-center gap-3 rounded-xl p-3 text-sm text-stone-400 hover:bg-white/5"
           >
             {collapsed ? (
               <PanelLeftOpen size={18} />
             ) : (
               <PanelLeftClose size={18} />
-            )}{" "}
+            )}
             {!collapsed && "Collapse sidebar"}
           </button>
         </div>
       </aside>
+      <Dialog.Root open={open} onOpenChange={setOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/40 lg:hidden" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              document.getElementById("admin-menu-trigger")?.focus();
+            }}
+            className="fixed inset-y-0 left-0 z-[61] flex w-[min(288px,90vw)] flex-col border-r bg-[#242628] text-stone-200 lg:hidden"
+          >
+            <Dialog.Title className="sr-only">Admin navigation</Dialog.Title>
+            <SidebarBrand />
+            <Dialog.Close
+              aria-label="Close navigation"
+              className="absolute right-3 top-5 grid size-10 place-items-center rounded-lg hover:bg-white/10"
+            >
+              <X size={20} />
+            </Dialog.Close>
+            <AdminNavigation onNavigate={() => setOpen(false)} />
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
       <div className="min-w-0">
         <header className="sticky top-0 z-20 flex h-20 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur md:px-7">
           <Button
@@ -147,6 +138,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             className="lg:hidden"
             onClick={() => setOpen(true)}
             aria-label="Open navigation"
+            id="admin-menu-trigger"
+            aria-expanded={open}
+            aria-haspopup="dialog"
           >
             <Menu />
           </Button>
@@ -225,5 +219,65 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </div>
       <MobileBottomNav />
     </div>
+  );
+}
+
+function SidebarBrand({ collapsed = false }: { collapsed?: boolean }) {
+  return (
+    <div className="flex h-20 shrink-0 items-center gap-3 border-b border-white/10 px-5">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-stone-100 font-black text-[#242628]">
+        A
+      </span>
+      {!collapsed && (
+        <div>
+          <b className="block tracking-wide">PartsArc</b>
+          <small className="text-stone-400">Operations control</small>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminNavigation({
+  collapsed = false,
+  onNavigate,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  const path = usePathname();
+  return (
+    <nav
+      aria-label="Admin sections"
+      className="scrollbar flex-1 overflow-y-auto p-3"
+    >
+      {groups.map(([name, items]) => (
+        <div key={name} className="mb-5">
+          {!collapsed && (
+            <p className="mb-2 px-3 text-[10px] font-black tracking-[.16em] text-stone-400">
+              {name.toUpperCase()}
+            </p>
+          )}
+          {items.map(([label, href, Icon]) => {
+            const active = path === href || path.startsWith(`${href}/`);
+            return (
+              <Link
+                key={href}
+                title={label}
+                href={href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={`relative mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold ${active ? "bg-white/10 text-white before:absolute before:left-0 before:h-6 before:w-0.5 before:bg-white" : "text-stone-400 hover:bg-white/5 hover:text-white"}`}
+              >
+                <Icon size={19} aria-hidden="true" />
+                <span className={collapsed ? "sr-only" : undefined}>
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
   );
 }

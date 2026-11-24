@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { message } from "@/lib/api";
 import { send } from "@/lib/admin";
 import { Button } from "./ui";
+import { FormDialogCompletion } from "./form-dialog-context";
 
 export type ActionField = {
   name: string;
@@ -45,6 +46,7 @@ export function ActionForm({
   onDone?: (result: unknown) => unknown | Promise<unknown>;
   resetOnSuccess?: boolean;
 }) {
+  const completeDialog = useContext(FormDialogCompletion);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [visiblePasswords, setVisiblePasswords] = useState<
@@ -77,6 +79,7 @@ export function ActionForm({
           toast.success(`${submit} completed`);
           await onDone?.(result);
           if (resetOnSuccess) form.reset();
+          completeDialog?.();
         } catch (cause) {
           setError(message(cause));
         } finally {

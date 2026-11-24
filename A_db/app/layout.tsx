@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "PartsArc Operations",
   description: "Admin operations workspace",
 };
+// Browser extensions may add body attributes before hydration; descendant mismatches remain checked.
 export default function RootLayout({
   children,
 }: {
@@ -15,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>{children}</AuthProvider>
           <Toaster richColors position="top-right" />

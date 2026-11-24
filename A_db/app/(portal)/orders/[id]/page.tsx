@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import { SnapshotDetails } from "@/components/snapshot-details";
 import { ActionForm } from "@/components/action-form";
 import { ErrorBox, PageHeader } from "@/components/page";
 import { Badge, Empty, Skeleton, Status } from "@/components/ui";
@@ -161,10 +162,7 @@ export default function OrderDetail({
               </div>
             ))}
           </div>
-          <h3 className="mt-4 font-black">Delivery snapshot</h3>
-          <pre className="mt-2 whitespace-pre-wrap rounded-xl bg-muted p-4 text-xs">
-            {JSON.stringify(order.delivery, null, 2)}
-          </pre>
+          <SnapshotDetails title="Delivery details" value={order.delivery} />
         </div>
         <div className="space-y-5">
           <div className="panel p-5">

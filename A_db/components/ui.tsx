@@ -33,11 +33,15 @@ export function Badge({
 export const statusTone = (
   status: string,
 ): "neutral" | "success" | "warning" | "danger" =>
-  /ACTIVE|COMPLETED|DELIVERED|PAID|PROCESSED|APPROVED|PUBLISHED/.test(status)
+  /^(ACTIVE|COMPLETED|DELIVERED|PAID|PROCESSED|APPROVED|PUBLISHED)$/.test(
+    status,
+  )
     ? "success"
-    : /FAILED|REJECTED|SUSPENDED|CANCELLED|CLOSED|DISABLED/.test(status)
+    : /^(FAILED|REJECTED|SUSPENDED|CANCELLED|CLOSED|DISABLED|INACTIVE)$/.test(
+          status,
+        )
       ? "danger"
-      : /PENDING|URGENT|REVIEW|EXPIRED|DRAFT/.test(status)
+      : /PENDING|URGENT|REVIEW|EXPIRED|DRAFT|PARTIALLY_PAID|UNPAID/.test(status)
         ? "warning"
         : "neutral";
 export function Status({ value }: { value?: string | null }) {

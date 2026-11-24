@@ -1,6 +1,8 @@
 "use client";
 
 import { MoreHorizontal } from "lucide-react";
+import { useState } from "react";
+import { FormDialogCompletion } from "./form-dialog-context";
 import { Button, Dialog, DialogContent, DialogTrigger, Empty } from "./ui";
 import { cn } from "@/lib/utils";
 
@@ -13,10 +15,15 @@ export function FormDialog({
   trigger: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent title={title}>{children}</DialogContent>
+      <DialogContent title={title}>
+        <FormDialogCompletion.Provider value={() => setOpen(false)}>
+          {children}
+        </FormDialogCompletion.Provider>
+      </DialogContent>
     </Dialog>
   );
 }
