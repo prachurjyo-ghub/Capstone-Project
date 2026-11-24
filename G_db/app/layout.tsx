@@ -10,8 +10,8 @@ import "./garage.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Parts Ark Garage",
-    template: "%s | Parts Ark Garage",
+    default: "Parts Arc Garage",
+    template: "%s | Parts Arc Garage",
   },
   description: "Garage jobs and vehicle inspections.",
 };

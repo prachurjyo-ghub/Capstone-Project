@@ -2,7 +2,9 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiArrowUpRight, FiChevronDown, FiClock, FiMapPin, FiSearch, FiTool, FiTruck, FiX } from "react-icons/fi";
+import { FiArrowUpRight, FiCheck, FiChevronDown, FiClock, FiMapPin, FiSearch, FiTool, FiTruck, FiX } from "react-icons/fi";
+
+import * as Select from "@/components/ui/select";
 
 const areas = ["Mirpur", "Dhanmondi", "Uttara"];
 const services = ["Diagnostics", "Brakes", "AC service", "Electrical", "Body repair", "Routine service"];
@@ -27,14 +29,25 @@ function SearchField({ label, name, icon, value, options, empty }: {
   return (
     <div className="gf-field">
       <label htmlFor={`garage-${name}`}>{label}</label>
-      <span className="gf-control">
-        {icon}
-        <select id={`garage-${name}`} name={name} defaultValue={value} required={!empty}>
-          {empty && <option value="">{empty}</option>}
-          {options.map((option) => <option key={option}>{option}</option>)}
-        </select>
-        <FiChevronDown aria-hidden="true" />
-      </span>
+      <Select.Root name={name} defaultValue={value || "any"} required={!empty}>
+        <Select.Trigger id={`garage-${name}`} className="gf-control">
+          {icon}
+          <Select.Value />
+          <Select.Icon asChild><FiChevronDown aria-hidden="true" /></Select.Icon>
+        </Select.Trigger>
+        <Select.Portal>
+          <Select.Content className="gf-options" position="popper" sideOffset={5} collisionPadding={12}>
+            <Select.Viewport>
+              {(empty ? ["any", ...options] : options).map((option) => (
+                <Select.Item className="gf-option" value={option} key={option}>
+                  <Select.ItemText>{option === "any" ? empty : option}</Select.ItemText>
+                  <Select.ItemIndicator><FiCheck aria-hidden="true" /></Select.ItemIndicator>
+                </Select.Item>
+              ))}
+            </Select.Viewport>
+          </Select.Content>
+        </Select.Portal>
+      </Select.Root>
     </div>
   );
 }
@@ -53,8 +66,8 @@ export function GarageFinder() {
 
   function search(nextArea: string, nextService = "", nextType = "") {
     const params = new URLSearchParams({ area: nextArea });
-    if (nextService) params.set("service", nextService);
-    if (nextType) params.set("type", nextType);
+    if (nextService && nextService !== "any") params.set("service", nextService);
+    if (nextType && nextType !== "any") params.set("type", nextType);
     router.push(`/garages?${params}`, { scroll: false });
   }
 
@@ -68,7 +81,7 @@ export function GarageFinder() {
     <div className="garage-finder">
       <header className="gf-top">
         <div className="gf-wrap gf-top-inner">
-          <div className="gf-brand"><span className="gf-brand-icon"><FiTool aria-hidden="true" /></span> Parts Ark</div>
+          <div className="gf-brand"><span className="gf-brand-icon"><FiTool aria-hidden="true" /></span> Parts Arc</div>
           <span className="gf-top-label">Garage Finder</span>
         </div>
       </header>

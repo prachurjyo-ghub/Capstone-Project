@@ -1,6 +1,6 @@
 # Garage Inspection
 
-Implementation plan for the local Parts Ark Capstone project. The first release lets a customer find a garage, a garage owner assign an inspection, and a mechanic submit findings with evidence. The owner can then share selected findings and files with that customer.
+Implementation plan for the local Parts Arc Capstone project. The first release lets a customer find a garage, a garage owner assign an inspection, and a mechanic submit findings with evidence. The owner can then share selected findings and files with that customer.
 
 ## Local design preview
 
@@ -10,7 +10,7 @@ Implementation plan for the local Parts Ark Capstone project. The first release 
 | Garage Owner Dashboard | [localhost:3003/owner](http://localhost:3003/owner) |
 | Mechanic Workspace | [localhost:3003/mechanic](http://localhost:3003/mechanic) |
 
-Run `npm ci` and `npm run dev -- -H localhost` in `C_frontend` and `G_db` in separate terminals. The finder uses sample listings. The owner and mechanic preview share browser-local jobs, profiles, and report metadata. File selection previews the most recent photo in the current tab. Use sample details for the prototype.
+Run `npm ci` and `npm run dev -- -H localhost` in `C_frontend` and `G_db` in separate terminals. The finder uses sample listings. The owner and mechanic preview share browser-local jobs, profiles, ledger entries, quotations and report metadata. Credential reset produces a demo code. The customer search is the customer preview for this phase. Use sample details for the prototype.
 
 ## Decisions for the first release
 
@@ -22,7 +22,8 @@ Run `npm ci` and `npm run dev -- -H localhost` in `C_frontend` and `G_db` in sep
 | Garage discovery | Search one location area, one service and an optional garage type. Start with a small shared list of areas, types and services used by both the profile editor and search form. |
 | Vehicle intake | Start with walk-in intake. The customer finds the garage and calls or visits. The owner creates the inspection job when the car arrives. |
 | Evidence | Use photos first, then one short manually uploaded video clip per inspection. The mechanic records on an action camera, transfers or exports the clip, and chooses the file. Findings come from the mechanic and are reviewed by the owner. |
-| Garage fee | Store the amount received from the garage in BDT for the access period. This is an admin record. Customer repair billing, payment collection, appointment booking, interactive maps and direct camera integration can be considered separately. |
+| Garage fee | Store the amount received from the garage in BDT for the access period as an admin record. |
+| Garage finance | Give the owner a simple ledger of received revenue and internal expenses. Calculate sales entry count and net profit or loss from that ledger. Quoted labour only becomes recorded revenue when the owner logs a received payment. |
 
 ## Customer experience
 
@@ -86,26 +87,28 @@ Build one sign-in screen in `G_db` with **Garage Owner** and **Mechanic** choice
 
 ## Garage owner workspace
 
-Use three menu items. Put sign-out in the account menu. The default view is **Jobs**, so the owner lands directly on work that needs attention.
+Use five menu items. Keep account actions under the avatar. Start on **Dashboard** with finance totals and jobs needing assignment or report review.
 
 | Menu | Minimum content |
 | --- | --- |
-| **Jobs** | **New Job** button, filters for **Needs assignment**, **Assigned**, **Ready for review** and **Closed**. Each row or card shows job reference, vehicle, mechanic and status. The detail screen contains intake data, assignment, report review and sharing. |
-| **Mechanics** | Name, username, active status, and **Add Mechanic**. The owner enters the mechanic's name, username and contact email. Show the generated temporary password once for private handoff. The mechanic changes it on first sign-in. The owner can deactivate the membership while past jobs retain their attribution. |
+| **Dashboard** | Recorded revenue, expenses, net profit or loss, sales entry count and urgent jobs. |
+| **Jobs** | **New Job** button, filters for **Needs assignment**, **Assigned**, **Ready for review** and **Closed**. Each row or card shows job reference, vehicle, mechanic and status. The detail screen contains intake data, assignment, and **Report**, **Quotation** and **Evidence** sections. |
+| **Mechanics** | Name, username, active status, and **Add Mechanic**. The owner enters the mechanic's name, username and contact email. Support editing mechanic details and resetting forgotten credentials. Show the generated temporary password once for private handoff. The mechanic changes it on first sign-in. The owner can deactivate the membership while past jobs retain their attribution. |
+| **Finance** | Add, edit or remove a received payment or expense with a date, description and amount. |
 | **Garage Profile** | Public name, garage type, area, street address, public phone, offered services, optional hours and short description. Use **Save Profile**. A complete profile for an active garage appears in customer search automatically as soon as it is saved. |
 
 Use the garage name set by admin as the initial public name. Require an area, address, valid public phone, garage type and at least one service before showing the profile. The API applies this same eligibility rule to search and direct links. Profile edits become visible on save without an admin approval step.
 
 - **New Job** collects the existing customer account email, a short vehicle label, requested service and an optional complaint. Allow an optional saved-vehicle reference only when it belongs to that customer. Confirm the linked customer before saving. Support one garage per owner in the demo UI.
 - **Assign mechanic** lists active mechanics from this garage only. The owner can reassign before a draft exists. For the first release, the API locks assignment once a draft exists and the UI explains why.
-- **Review report** shows the submitted summary, findings, photos and clip in one detail screen. **Return for edits** is available before sharing. **Share with customer** previews the exact items the customer will receive. The owner can revoke access from the same screen.
-- On desktop, use a short side navigation and a job table. On mobile, use the same three labelled links in a compact tab bar, job cards in place of a wide table, and one prominent action for the current job state. Skip a separate overview, charts and secondary settings.
+- **Report** shows the mechanic’s findings and lets the owner return them for edits. **Quotation** lists required parts and availability alongside a BDT labour total. Leave part prices out of the quotation. **Evidence** records a customer request and lets the owner choose specific photos or clips. Preview actions prepare the handover in the browser. Connect delivery after the customer profile integration.
+- On desktop, use a side navigation and a job table. On mobile, keep the five main actions in a floating bottom bar, with a compact brand-and-account header. Use job cards in place of wide tables and shadcn-style Select controls for menu options.
 
 On a phone, the owner's default screen can start with this layout.
 
 ```text
 Garage Workspace                  [ Account ]
-[ Jobs ]     [ Mechanics ]   [ Garage Profile ]
+[ Home ] [ Jobs ] [ Mechanics ] [ Finance ] [ Profile ]
 
 Jobs                              [ New Job ]
 [ Needs assignment ▾ ]
@@ -116,7 +119,7 @@ Brake inspection                    Unassigned
 
 ## Mechanic workspace
 
-Give the mechanic one menu item, **My Jobs**, with an account menu for sign-out. The list shows job reference, vehicle label, requested service and status. The mechanic can only open their own assigned jobs in the selected garage.
+Give the mechanic **Dashboard**, **My Jobs** and **Profile**. The mobile workspace uses those three buttons in a floating bottom bar. Dashboard shows active, awaiting review and completed job counts, plus the next jobs. My Jobs shows assigned work and the report editor. Profile stores the mechanic’s photo, name, email, phone and specialty.
 
 ```text
 My Jobs                        [ Account ]

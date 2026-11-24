@@ -4,7 +4,7 @@ import { GarageFinder } from "./garage-finder";
 import "./garage-finder.css";
 
 export const metadata: Metadata = {
-  title: "Find a Garage | Parts Ark",
+  title: "Find a Garage | Parts Arc",
   description: "Search for a workshop by area, service and garage type.",
 };
 

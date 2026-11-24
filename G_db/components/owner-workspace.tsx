@@ -1,12 +1,15 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { FiArrowRight, FiCheck, FiClipboard, FiClock, FiImage, FiPlus, FiTool, FiUser, FiVideo, FiX } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiClipboard, FiClock, FiEdit2, FiKey, FiPlus, FiTool, FiUser, FiX } from "react-icons/fi";
 import { garageServices, saveJob, saveMechanic, saveProfile, useGarageDemo, type Job, type Mechanic } from "./demo-state";
-import { Status, Workspace, type OwnerTab } from "./workspace";
+import { FinanceTotals, FinanceView } from "./finance";
+import { JobHandover } from "./job-handover";
+import { GarageSelect } from "./ui/select";
+import { ownerTabs, Status, Workspace, type OwnerTab } from "./workspace";
 
 type Filter = "All jobs" | "Needs assignment" | "In progress" | "Ready for review" | "Closed";
-type Modal = "job" | "mechanic";
+type Modal = "job" | "mechanic" | "reset";
 const filters: Filter[] = ["All jobs", "Needs assignment", "In progress", "Ready for review", "Closed"];
 
 function matchesFilter(job: Job, filter: Filter) {
@@ -20,11 +23,9 @@ function matchesFilter(job: Job, filter: Filter) {
 }
 
 function JobDetail({ job, mechanics }: { job: Job; mechanics: Mechanic[] }) {
-  const [selectedEvidence, setSelectedEvidence] = useState<string[]>([]);
-
   function assign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const mechanicId = String(new FormData(event.currentTarget).get("mechanic"));
+    const mechanicId = String(new FormData(event.currentTarget).get("mechanic") ?? "");
     if (mechanicId) saveJob({ ...job, mechanicId, status: "Assigned" });
   }
 
@@ -43,45 +44,15 @@ function JobDetail({ job, mechanics }: { job: Job; mechanics: Mechanic[] }) {
 
       {canAssign && (
         <form className="stack-form" onSubmit={assign}>
-          <label>Assign mechanic
-            <select name="mechanic" defaultValue={job.mechanicId} required>
-              <option value="">Select mechanic</option>
-              {mechanics.filter((mechanic) => mechanic.active).map((mechanic) => <option value={mechanic.id} key={mechanic.id}>{mechanic.name}</option>)}
-            </select>
-          </label>
+          <div className="field-label"><span>Assign mechanic</span><GarageSelect
+            label="Assign mechanic" name="mechanic" defaultValue={job.mechanicId} placeholder="Select mechanic" required
+            options={mechanics.filter((mechanic) => mechanic.active).map((mechanic) => ({ value: mechanic.id, label: mechanic.name }))}
+          /></div>
           <button className="button primary full" type="submit"><FiUser aria-hidden="true" /> {job.mechanicId ? "Update assignment" : "Assign mechanic"}</button>
         </form>
       )}
 
-      {job.report && ["Ready for review", "Shared", "Closed"].includes(job.status) && (
-        <section className="detail-report" aria-label="Inspection report">
-          <h4>Inspection report</h4>
-          <p>{job.report.summary}</p>
-          {job.report.findings.map((finding, index) => <div className="finding-read" key={index}><strong>{finding.component}</strong><p>{finding.issue}</p><span>{finding.nextStep}</span></div>)}
-          {job.status === "Ready for review" && (
-            <>
-              {job.report.evidence.length > 0 && <p className="muted">Select files to share with the report.</p>}
-              {job.report.evidence.map((item) => (
-                <label key={item.id} className="evidence-choice">
-                  <input type="checkbox" checked={selectedEvidence.includes(item.id)} onChange={(event) => {
-                    const checked = event.currentTarget.checked;
-                    setSelectedEvidence((ids) => checked ? [...ids, item.id] : ids.filter((id) => id !== item.id));
-                  }} />
-                  {item.kind === "photo" ? <FiImage aria-hidden="true" /> : <FiVideo aria-hidden="true" />} {item.name}
-                </label>
-              ))}
-              <button className="button primary full" type="button" onClick={() => saveJob({ ...job, status: "Shared", sharedEvidence: selectedEvidence })}>Share with customer <FiArrowRight aria-hidden="true" /></button>
-              <button className="button secondary full" type="button" onClick={() => saveJob({ ...job, status: "In progress" })}>Return for edits</button>
-            </>
-          )}
-          {job.status === "Shared" && (
-            <>
-              <p className="share-message" role="status"><FiCheck aria-hidden="true" /> Marked shared in this preview ({job.sharedEvidence?.length ?? 0} files).</p>
-              <button className="button secondary full" type="button" onClick={() => saveJob({ ...job, status: "Ready for review", sharedEvidence: undefined })}>Revoke preview share</button>
-            </>
-          )}
-        </section>
-      )}
+      {job.report && ["Ready for review", "Shared", "Closed"].includes(job.status) && <JobHandover job={job} />}
     </aside>
   );
 }
@@ -110,8 +81,8 @@ function ProfileForm() {
       <h2>Public garage information</h2>
       <div className="form-grid">
         <label>Garage name<input name="name" required defaultValue={profile.name} /></label>
-        <label>Area<select name="area" defaultValue={profile.area} required>{["Mirpur", "Dhanmondi", "Uttara"].map((area) => <option key={area}>{area}</option>)}</select></label>
-        <label>Garage type<select name="type" defaultValue={profile.type} required>{["General workshop", "Specialist workshop", "Body shop"].map((type) => <option key={type}>{type}</option>)}</select></label>
+        <div className="field-label"><span>Area</span><GarageSelect label="Area" name="area" defaultValue={profile.area} options={["Mirpur", "Dhanmondi", "Uttara"]} required /></div>
+        <div className="field-label"><span>Garage type</span><GarageSelect label="Garage type" name="type" defaultValue={profile.type} options={["General workshop", "Specialist workshop", "Body shop"]} required /></div>
         <label>Public phone<input name="phone" type="tel" defaultValue={profile.phone} placeholder="e.g. +880 1…" /></label>
         <label>Street address<input name="address" defaultValue={profile.address} required /></label>
         <label>Opening hours<input name="hours" defaultValue={profile.hours} /></label>
@@ -129,12 +100,14 @@ function ProfileForm() {
 }
 
 export function OwnerWorkspace() {
-  const { jobs, mechanics, profile } = useGarageDemo();
-  const [tab, setTab] = useState<OwnerTab>("Jobs");
+  const { jobs, mechanics, profile, finance } = useGarageDemo();
+  const [tab, setTab] = useState<OwnerTab>("Dashboard");
   const [filter, setFilter] = useState<Filter>("All jobs");
   const [selectedId, setSelectedId] = useState("JOB-103");
   const [modal, setModal] = useState<Modal>("job");
   const [formError, setFormError] = useState("");
+  const [editing, setEditing] = useState<Mechanic | null>(null);
+  const [resetCode, setResetCode] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const visibleJobs = jobs.filter((job) => matchesFilter(job, filter));
   const selectedJob = jobs.find((job) => job.id === selectedId) ?? visibleJobs[0];
@@ -146,8 +119,10 @@ export function OwnerWorkspace() {
     }
   }
 
-  function openModal(nextModal: Modal) {
+  function openModal(nextModal: Modal, mechanic: Mechanic | null = null) {
     setModal(nextModal);
+    setEditing(mechanic);
+    setResetCode("");
     setFormError("");
     dialog.current?.showModal();
   }
@@ -164,11 +139,15 @@ export function OwnerWorkspace() {
         setFormError("Use letters, numbers, dots, underscores or hyphens for the username.");
         return;
       }
-      if (mechanics.some((mechanic) => mechanic.username === username)) {
+      if (mechanics.some((mechanic) => mechanic.username === username && mechanic.id !== editing?.id)) {
         setFormError("This username already exists in the preview.");
         return;
       }
-      saveMechanic({ id: crypto.randomUUID(), name: field("name"), username, email: field("email"), active: true });
+      if (!field("name")) {
+        setFormError("Enter the mechanic’s full name.");
+        return;
+      }
+      saveMechanic({ ...editing, id: editing?.id ?? crypto.randomUUID(), name: field("name"), username, email: field("email"), active: editing?.active ?? true });
     } else {
       const nextNumber = Math.max(...jobs.map((job) => Number(job.id.slice(4)))) + 1;
       const id = `JOB-${nextNumber}`;
@@ -190,12 +169,42 @@ export function OwnerWorkspace() {
     { label: "Ready for review", icon: FiClipboard, tone: "purple" },
   ] as const;
 
+  const urgentJobs = jobs.filter((job) => job.status === "Unassigned" || job.status === "Ready for review").slice(0, 4);
+
+  function openJob(job: Job) {
+    setFilter("All jobs");
+    setSelectedId(job.id);
+    setTab("Jobs");
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
   return (
-    <Workspace role="owner" name="Farhan Ahmed" garage={profile.name} tab={tab} onTab={setTab}>
-      <div className="page-heading">
-        <div><h1>{tab === "Jobs" ? "Garage jobs" : tab}</h1><p>{tab === "Jobs" ? "Assign jobs and review vehicle inspections." : tab === "Mechanics" ? "Manage the people who inspect vehicles at your garage." : "Edit the details customers see in the garage directory."}</p></div>
-        {tab !== "Garage Profile" && <button className="button primary" type="button" onClick={() => openModal(tab === "Jobs" ? "job" : "mechanic")}><FiPlus aria-hidden="true" /> {tab === "Jobs" ? "New job" : "Add mechanic"}</button>}
-      </div>
+    <Workspace role="owner" name="Farhan Ahmed" garage={profile.name} tab={tab} tabs={ownerTabs} onTab={setTab}>
+      {tab === "Dashboard" && (
+        <>
+          <div className="dashboard-banner owner-banner">
+            <div><p className="banner-label">Garage overview</p><h1>{profile.name}</h1><p>Workshop activity and recorded finances at a glance.</p></div>
+            <button type="button" className="button banner-button" onClick={() => openModal("job")}><FiPlus aria-hidden="true" /> New job</button>
+          </div>
+          <FinanceTotals entries={finance} />
+          <div className="dashboard-grid">
+            <section className="panel dashboard-list" aria-labelledby="attention-heading">
+              <div className="list-heading"><div><h2 id="attention-heading">Needs your attention</h2><p className="muted">Jobs awaiting assignment or report review</p></div><button className="text-link" type="button" onClick={() => setTab("Jobs")}>All jobs <FiArrowRight aria-hidden="true" /></button></div>
+              <ul>{urgentJobs.map((job) => <li key={job.id}><button type="button" className="dashboard-job" onClick={() => openJob(job)}><span className="vehicle-icon"><FiTool aria-hidden="true" /></span><span><strong>{job.vehicle}</strong><small>{job.id} · {job.service}</small></span><Status status={job.status} /></button></li>)}</ul>
+              {!urgentJobs.length && <p className="empty-state">No jobs need attention.</p>}
+            </section>
+            <section className="panel dashboard-shortcut"><span className="metric-icon tone-blue"><FiClipboard aria-hidden="true" /></span><h2>Finance activity</h2><p className="muted">Record labour payments or expenses to update your totals.</p><button className="button secondary" type="button" onClick={() => setTab("Finance")}>Open Finance <FiArrowRight aria-hidden="true" /></button></section>
+          </div>
+        </>
+      )}
+
+      {tab === "Finance" && <FinanceView entries={finance} />}
+      {tab !== "Dashboard" && tab !== "Finance" && (
+        <div className="page-heading">
+          <div><h1>{tab === "Jobs" ? "Garage jobs" : tab}</h1><p>{tab === "Jobs" ? "Assign jobs, review inspections and prepare customer quotations." : tab === "Mechanics" ? "Manage workshop accounts and access." : "Edit the details customers see in the garage directory."}</p></div>
+          {tab !== "Garage Profile" && <button className="button primary" type="button" onClick={() => openModal(tab === "Jobs" ? "job" : "mechanic")}><FiPlus aria-hidden="true" /> {tab === "Jobs" ? "New job" : "Add mechanic"}</button>}
+        </div>
+      )}
 
       {tab === "Jobs" && (
         <>
@@ -212,8 +221,7 @@ export function OwnerWorkspace() {
             <section className="panel job-list" aria-labelledby="job-list-title">
               <div className="list-heading">
                 <div><h2 id="job-list-title">Job queue</h2><p className="muted">{visibleJobs.length} {visibleJobs.length === 1 ? "job" : "jobs"}</p></div>
-                <label className="visually-hidden" htmlFor="job-filter">Filter jobs</label>
-                <select id="job-filter" value={filter} onChange={(event) => applyFilter(event.currentTarget.value as Filter)}>{filters.map((item) => <option key={item}>{item}</option>)}</select>
+                <GarageSelect label="Filter jobs" value={filter} onValueChange={(value) => applyFilter(value as Filter)} options={filters} compact />
               </div>
               <div className="queue-labels" aria-hidden="true"><span>Vehicle</span><span>Mechanic</span><span>Status</span></div>
               <ul className="queue">
@@ -242,7 +250,11 @@ export function OwnerWorkspace() {
             <div className="team-row" key={mechanic.id}>
               <span className="avatar"><FiUser aria-hidden="true" /></span>
               <div><strong>{mechanic.name}</strong><p className="muted">@{mechanic.username} · {mechanic.active ? "Active" : "Inactive"}</p></div>
-              <button className="button secondary" type="button" onClick={() => saveMechanic({ ...mechanic, active: !mechanic.active })}>{mechanic.active ? "Deactivate" : "Activate"}</button>
+              <div className="team-actions">
+                <button className="button secondary" type="button" onClick={() => openModal("mechanic", mechanic)}><FiEdit2 aria-hidden="true" /> Edit</button>
+                <button className="button secondary" type="button" onClick={() => openModal("reset", mechanic)}><FiKey aria-hidden="true" /> Reset access</button>
+                <button className="button secondary" type="button" onClick={() => saveMechanic({ ...mechanic, active: !mechanic.active })}>{mechanic.active ? "Deactivate" : "Activate"}</button>
+              </div>
             </div>
           ))}
         </section>
@@ -250,29 +262,36 @@ export function OwnerWorkspace() {
 
       {tab === "Garage Profile" && <ProfileForm />}
 
-      <dialog className="workspace-dialog" ref={dialog} aria-labelledby="create-title">
-        <div className="dialog-heading"><h2 id="create-title">{modal === "job" ? "New job" : "Add mechanic"}</h2><button className="icon-button" type="button" aria-label="Close form" onClick={() => dialog.current?.close()}><FiX /></button></div>
-        <form className="stack-form" onSubmit={create} key={modal}>
+      <dialog className="workspace-dialog" ref={dialog} aria-labelledby="create-title" onClose={() => setResetCode("")}>
+        <div className="dialog-heading"><h2 id="create-title">{modal === "job" ? "New job" : modal === "reset" ? "Reset mechanic access" : editing ? "Edit mechanic" : "Add mechanic"}</h2><button className="icon-button" type="button" aria-label="Close form" onClick={() => dialog.current?.close()}><FiX /></button></div>
+        {modal === "reset" ? (
+          <div className="stack-form">
+            <p>Generate a temporary code for <strong>{editing?.name}</strong> (@{editing?.username}).</p>
+            <p className="muted">This preview illustrates the reset flow. Real credentials will be issued by the backend.</p>
+            {resetCode ? <div className="temporary-code" role="status"><span>Preview code</span><strong>{resetCode}</strong></div>
+              : <button type="button" className="button primary" onClick={() => setResetCode(`Demo-${crypto.randomUUID().slice(0, 8)}`)}>Generate preview code</button>}
+          </div>
+        ) : <form className="stack-form" onSubmit={create} key={`${modal}-${editing?.id ?? "new"}`}>
           {modal === "job" ? (
             <>
               <label>Vehicle<input name="vehicle" placeholder="e.g. Toyota Axio" required /></label>
               <label>Registration number<input name="registration" /></label>
               <label>Customer email<input name="customer" type="email" placeholder="customer@example.test" required /></label>
-              <label>Service<select name="service">{garageServices.map((service) => <option key={service}>{service}</option>)}</select></label>
+              <div className="field-label"><span>Service</span><GarageSelect label="Service" name="service" defaultValue={garageServices[0]} options={garageServices} required /></div>
               <label>Customer concern<textarea name="concern" rows={2} /></label>
               <label className="check-row"><input type="checkbox" name="consent" /> Customer agreed to photo and video evidence</label>
             </>
           ) : (
             <>
-              <label>Full name<input name="name" required /></label>
-              <label>Username<input name="username" required /></label>
-              <label>Email<input name="email" type="email" required /></label>
+              <label>Full name<input name="name" required defaultValue={editing?.name} /></label>
+              <label>Username<input name="username" required defaultValue={editing?.username} /></label>
+              <label>Email<input name="email" type="email" required defaultValue={editing?.email} /></label>
               <p className="muted">Preview accounts are saved in this browser.</p>
             </>
           )}
           {formError && <p className="form-error" role="alert">{formError}</p>}
-          <button className="button primary full" type="submit">{modal === "job" ? "Create job" : "Add mechanic"}</button>
-        </form>
+          <button className="button primary full" type="submit">{modal === "job" ? "Create job" : editing ? "Save mechanic" : "Add mechanic"}</button>
+        </form>}
       </dialog>
     </Workspace>
   );

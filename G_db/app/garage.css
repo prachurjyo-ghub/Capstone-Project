@@ -229,3 +229,125 @@ input[type="checkbox"] { accent-color: var(--blue); width: 17px; height: 17px; f
   .form-grid { grid-template-columns: 1fr; }
   .page-heading { align-items: flex-start; }
 }
+
+/* Workspace navigation and shared menu controls */
+.mobile-brand, .mobile-workspace-nav { display: none; }
+.account-menu { position: relative; }
+.account-menu summary { list-style: none; cursor: pointer; min-height: 44px; }
+.account-menu summary::-webkit-details-marker { display: none; }
+.avatar { overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.account-popover { position: absolute; z-index: 30; right: 0; top: 100%; min-width: 170px; padding: 12px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 30px #132a5425; }
+.account-popover p { color: var(--muted); font-size: 12px; }
+.account-popover a { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 9px; border-top: 1px solid var(--line); color: var(--blue-dark); font-size: 12px; font-weight: 700; }
+.field-label { display: grid; gap: 5px; font-size: 12px; font-weight: 700; min-width: 0; }
+.garage-select { display: flex; align-items: center; justify-content: space-between; width: 100%; min-width: 0; min-height: 43px; gap: 8px; padding: 7px 10px; border: 1px solid #d9e4f1; border-radius: 8px; background: #f7f9fd; text-align: left; font-weight: 600; }
+.garage-select > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.garage-select > svg { flex: none; color: var(--muted); }
+.garage-select[data-placeholder] { color: var(--muted); }
+.garage-select-compact { width: min(162px, 48%); min-height: 38px; font-size: 12px; }
+.garage-select-content { z-index: 80; width: var(--radix-select-trigger-width); max-width: calc(100vw - 24px); max-height: var(--radix-select-content-available-height); overflow: hidden; border: 1px solid #d6e3f3; border-radius: 10px; padding: 4px; background: #fff; color: var(--ink); box-shadow: 0 10px 28px #182d5040; }
+.garage-select-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; padding: 6px 8px; border-radius: 6px; outline: 0; font-size: 13px; cursor: default; }
+.garage-select-item[data-highlighted] { background: #eaf1ff; color: #143eae; }
+.garage-select-item svg { flex: none; color: var(--blue); }
+.garage-select-scroll { display: grid; place-items: center; min-height: 15px; color: var(--muted); }
+.garage-select-scroll .up { rotate: 180deg; }
+
+.dashboard-banner { position: relative; isolation: isolate; display: flex; justify-content: space-between; align-items: end; gap: 18px; overflow: hidden; min-height: 173px; padding: 24px 27px; margin-bottom: 18px; border-radius: 19px; color: #fff; background: linear-gradient(117deg, #14243f, #183f7a 86%); }
+.dashboard-banner::after { content: ""; position: absolute; z-index: -1; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 18px, #a4c5ff13 19px 20px); mask-image: linear-gradient(90deg, transparent 48%, #000); pointer-events: none; }
+.mechanic-banner { background: linear-gradient(114deg, #152b49, #154e68 88%); }
+.dashboard-banner h1 { font-size: clamp(30px, 4.3vw, 49px); font-weight: 800; overflow-wrap: anywhere; }
+.dashboard-banner p { color: #e0ebfb; font-size: 14px; margin-top: 7px; }
+.dashboard-banner .banner-label { color: #b3d0ff; font-weight: 700; font-size: 12px; margin-top: 0; margin-bottom: 6px; }
+.banner-button { background: #fff; color: #183d85; align-self: flex-end; }
+.banner-button:hover { background: #deebff; }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.dashboard-shortcut { padding: 20px; }
+.dashboard-shortcut h2 { margin: 11px 0 5px; font-size: 20px; }
+.dashboard-shortcut .button { margin-top: 13px; }
+.dashboard-job { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 65px; border: 0; border-top: 1px solid var(--line); padding: 10px 17px; text-align: left; background: #fff; }
+.dashboard-job:hover { background: #f0f5ff; }
+.dashboard-job strong, .dashboard-job small { display: block; overflow-wrap: anywhere; }
+.dashboard-job small { color: var(--muted); font-size: 11px; }
+.dashboard-list { overflow: hidden; }
+.text-link { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; border: 0; background: transparent; color: var(--blue-dark); font-weight: 700; white-space: nowrap; font-size: 12px; }
+.text-link:hover { text-decoration: underline; }
+.finance-total { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px 8px; padding: 14px 16px; }
+.finance-total strong, .finance-total small { grid-column: 1 / -1; }
+.finance-total strong { font: 800 clamp(22px, 2.5vw, 34px)/1.12 var(--heading); letter-spacing: -.04em; overflow-wrap: anywhere; }
+.finance-total small { color: var(--muted); font-size: 11px; }
+.tone-green { background: #e6f6ed; color: #266b4a; }
+.revenue-value { color: #1b6841; }
+.expense-value { color: #855320; }
+.ledger { overflow: hidden; }
+.ledger-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 11px; padding: 11px 17px; min-height: 62px; border-top: 1px solid var(--line); }
+.entry-description { min-width: 0; overflow-wrap: anywhere; }
+.entry-description small { display: block; color: var(--muted); }
+.entry-actions, .team-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: end; }
+.team-list, .profile-form { max-width: 1120px; }
+.profile-form { padding: clamp(17px, 3vw, 32px); }
+.profile-form .form-grid { gap: 16px 22px; }
+.profile-identity { display: flex; align-items: center; flex-wrap: wrap; gap: 11px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.profile-avatar { width: 59px; height: 59px; font-size: 24px; }
+.profile-photo-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-left: auto; }
+.stack-form .photo-picker { position: relative; display: inline-flex; cursor: pointer; }
+.photo-picker input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.photo-picker:focus-within { outline: 3px solid #497bff; outline-offset: 3px; }
+.temporary-code { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid #cadbf7; border-radius: 8px; background: #edf3ff; }
+.temporary-code span { color: var(--muted); font-size: 11px; }
+.temporary-code strong { font-family: ui-monospace, monospace; }
+.segmented { display: flex; gap: 4px; align-items: stretch; }
+.segmented button { min-height: 37px; padding: 4px 8px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; }
+.segmented button[aria-pressed="true"] { color: #234aab; border-color: #d5e3fc; background: #eef4ff; }
+.handover-tabs { justify-content: space-between; margin-bottom: 1px; }
+.handover-tabs button { flex: 1; }
+.handover-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.handover-actions button { flex: 1; }
+.button:disabled { opacity: .55; }
+.mechanic-next .dashboard-job { grid-template-columns: auto minmax(0, 1fr) auto 14px; }
+.mechanic-job-name .status { margin-top: 5px; }
+.next-job-arrow { color: #6280b0; }
+.mechanic-job { min-height: 76px; }
+
+@media (max-width: 840px) {
+  .sidebar, .header-context { display: none; }
+  .workspace-header { min-height: 66px; padding-inline: 15px; }
+  .mobile-brand { min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .mobile-brand > span:last-child { min-width: 0; }
+  .mobile-brand strong, .mobile-brand small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-brand strong { font: 800 16px/1.15 var(--heading); }
+  .mobile-brand small { font-size: 10px; color: var(--muted); }
+  .mobile-brand .brand-mark { width: 34px; height: 34px; border-radius: 9px; font-size: 15px; }
+  .account .avatar { width: 34px; height: 34px; }
+  .workspace-content { padding-bottom: calc(98px + env(safe-area-inset-bottom)); }
+  .mobile-workspace-nav {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px;
+    position: fixed; z-index: 40; left: 50%; bottom: max(12px, env(safe-area-inset-bottom));
+    width: min(440px, calc(100% - 22px)); transform: translateX(-50%);
+    padding: 5px; border: 1px solid #d8e4f5; border-radius: 17px;
+    background: #ffffffef; backdrop-filter: blur(15px); box-shadow: 0 9px 30px #122a5f33;
+  }
+  .mobile-workspace-mechanic { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mobile-workspace-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 49px; padding: 3px 1px; border: 0; border-radius: 11px; background: transparent; color: #466080; font-size: 10px; font-weight: 800; white-space: nowrap; }
+  .mobile-workspace-nav button svg { font-size: 17px; }
+  .mobile-workspace-nav [aria-current] { background: #e6efff; color: #1d48ba; }
+  .dashboard-banner { min-height: 0; padding: 16px; margin-bottom: 12px; border-radius: 15px; gap: 8px; }
+  .dashboard-banner h1 { font-size: clamp(24px, 6vw, 34px); }
+  .dashboard-banner p { font-size: 12px; }
+  .dashboard-banner .banner-label { font-size: 11px; }
+  .dashboard-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .finance-total { grid-template-columns: 1fr; gap: 5px; padding: 9px; border-radius: 10px; }
+  .finance-total .metric-label { grid-row: auto; font-size: 10px; }
+  .finance-total strong { font-size: clamp(16px, 4.2vw, 22px); }
+  .finance-total small { font-size: 9px; line-height: 1.2; }
+  .dashboard-job, .ledger-row { padding: 9px 11px; }
+  .ledger-row { grid-template-columns: auto minmax(0, 1fr) auto; gap: 7px; }
+  .entry-actions, .team-actions { grid-column: 2 / -1; justify-content: start; }
+  .ledger-row .icon-button { min-width: 40px; min-height: 40px; }
+  .team-row { grid-template-columns: auto minmax(0, 1fr); }
+  .garage-select { min-height: 44px; }
+  .garage-select-item { min-height: 41px; }
+  .segmented button { min-height: 42px; }
+  .profile-form .form-grid { gap: 12px; }
+  .profile-photo-actions { width: 100%; margin-left: 0; }
+}

@@ -6,6 +6,9 @@ export type JobStatus = "Unassigned" | "Assigned" | "In progress" | "Ready for r
 export type Finding = { component: string; issue: string; nextStep: string };
 export type Evidence = { id: string; name: string; kind: "photo" | "clip"; size: number };
 export type Report = { summary: string; findings: Finding[]; evidence: Evidence[] };
+export type PartsAvailability = "Customer supplies parts" | "Can source on request" | "Availability to be confirmed";
+export type Quotation = { labour: number; parts: string[]; availability: PartsAvailability; note: string; status: "Draft" | "Ready to hand over" };
+export type FinanceEntry = { id: string; kind: "Revenue" | "Expense"; amount: number; description: string; date: string };
 export type Job = {
   id: string;
   vehicle: string;
@@ -18,16 +21,24 @@ export type Job = {
   consent: boolean;
   report?: Report;
   sharedEvidence?: string[];
+  quotation?: Quotation;
+  evidenceRequested?: boolean;
 };
-export type Mechanic = { id: string; name: string; username: string; email: string; active: boolean };
+export type Mechanic = { id: string; name: string; username: string; email: string; active: boolean; phone?: string; specialty?: string; photo?: string };
 export type GarageProfile = { name: string; area: string; type: string; address: string; phone: string; hours: string; services: string[] };
-type GarageDemo = { jobs: Job[]; mechanics: Mechanic[]; profile: GarageProfile };
+type GarageDemo = { jobs: Job[]; mechanics: Mechanic[]; profile: GarageProfile; finance: FinanceEntry[] };
 
 export const garageServices = ["Diagnostics", "Brakes", "AC service", "Electrical", "Body repair", "Routine service"];
 export const sampleMechanicId = "tanvir";
 
 const initial: GarageDemo = {
   profile: { name: "Mirpur Motor Works", area: "Mirpur", type: "General workshop", address: "Block B, Mirpur 10, Dhaka", phone: "", hours: "Sat–Thu · 9:00 AM–7:00 PM", services: ["Brakes", "Diagnostics", "Routine service"] },
+  finance: [
+    { id: "finance-4", kind: "Revenue", amount: 760000, description: "Workshop labour", date: "2026-11-24" },
+    { id: "finance-3", kind: "Expense", amount: 280000, description: "Workshop supplies", date: "2026-11-22" },
+    { id: "finance-2", kind: "Revenue", amount: 520000, description: "Diagnostics and servicing", date: "2026-11-21" },
+    { id: "finance-1", kind: "Expense", amount: 160000, description: "Shop utilities", date: "2026-11-20" },
+  ],
   mechanics: [
     { id: sampleMechanicId, name: "Tanvir Ahmed", username: "tanvir", email: "tanvir@example.test", active: true },
     { id: "nadia", name: "Nadia Rahman", username: "nadia", email: "nadia@example.test", active: true },
@@ -63,8 +74,17 @@ function subscribe(listener: () => void) {
   };
 }
 
+function readDemo(snapshot: string): GarageDemo {
+  try {
+    const previous = JSON.parse(snapshot) as GarageDemo;
+    return { ...previous, finance: previous.finance ?? initial.finance };
+  } catch {
+    return initial;
+  }
+}
+
 function changeDemo(update: (current: GarageDemo) => GarageDemo) {
-  const next = JSON.stringify(update(JSON.parse(getSnapshot()) as GarageDemo));
+  const next = JSON.stringify(update(readDemo(getSnapshot())));
   fallbackSnapshot = next;
   try {
     localStorage.setItem(storageKey, next);
@@ -76,7 +96,7 @@ function changeDemo(update: (current: GarageDemo) => GarageDemo) {
 
 export function useGarageDemo() {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, () => initialSnapshot);
-  return useMemo(() => JSON.parse(snapshot) as GarageDemo, [snapshot]);
+  return useMemo(() => readDemo(snapshot), [snapshot]);
 }
 
 export function saveJob(nextJob: Job) {
@@ -99,4 +119,17 @@ export function saveMechanic(nextMechanic: Mechanic) {
 
 export function saveProfile(profile: GarageProfile) {
   changeDemo((state) => ({ ...state, profile }));
+}
+
+export function saveFinanceEntry(entry: FinanceEntry) {
+  changeDemo((state) => ({
+    ...state,
+    finance: state.finance.some((item) => item.id === entry.id)
+      ? state.finance.map((item) => item.id === entry.id ? entry : item)
+      : [entry, ...state.finance],
+  }));
+}
+
+export function removeFinanceEntry(id: string) {
+  changeDemo((state) => ({ ...state, finance: state.finance.filter((entry) => entry.id !== id) }));
 }

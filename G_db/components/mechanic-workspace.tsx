@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { FiArrowRight, FiCamera, FiCheck, FiClipboard, FiImage, FiPlus, FiTool, FiVideo, FiX } from "react-icons/fi";
+import { FiArrowRight, FiCamera, FiCheck, FiClipboard, FiClock, FiImage, FiPlus, FiTool, FiVideo, FiX } from "react-icons/fi";
 import { sampleMechanicId, saveJob, useGarageDemo, type Evidence, type Finding, type Job, type Report } from "./demo-state";
-import { Status, Workspace } from "./workspace";
+import { MechanicProfile } from "./mechanic-profile";
+import { mechanicTabs, Status, Workspace, type MechanicTab } from "./workspace";
 
 const emptyReport: Report = { summary: "", findings: [], evidence: [] };
 
@@ -155,38 +156,78 @@ function ReportEditor({ job, onSubmitted }: { job: Job; onSubmitted: () => void 
 export function MechanicWorkspace() {
   const { jobs, mechanics, profile } = useGarageDemo();
   const mechanic = mechanics.find((item) => item.id === sampleMechanicId);
+  const [tab, setTab] = useState<MechanicTab>("Dashboard");
   const [showClosed, setShowClosed] = useState(false);
   const [selectedId, setSelectedId] = useState("JOB-104");
   const myJobs = jobs.filter((job) => mechanic?.active && job.mechanicId === mechanic.id);
-  const visibleJobs = myJobs.filter((job) => showClosed ? !isOpen(job) : isOpen(job));
+  const openJobs = myJobs.filter(isOpen);
+  const visibleJobs = showClosed ? myJobs.filter((job) => !isOpen(job)) : openJobs;
   const selectedJob = visibleJobs.find((job) => job.id === selectedId) ?? visibleJobs[0];
 
+  function jumpToJob(job: Job) {
+    setShowClosed(!isOpen(job));
+    setSelectedId(job.id);
+    setTab("My Jobs");
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  const metrics = [
+    { label: "Active jobs", count: openJobs.length, icon: FiClock, tone: "blue" },
+    { label: "Awaiting review", count: myJobs.filter((job) => job.status === "Ready for review").length, icon: FiClipboard, tone: "purple" },
+    { label: "Completed", count: myJobs.filter((job) => job.status === "Shared" || job.status === "Closed").length, icon: FiCheck, tone: "green" },
+  ];
+
   return (
-    <Workspace role="mechanic" name={mechanic?.name ?? "Mechanic"} garage={profile.name}>
-      <div className="page-heading"><div><h1>My jobs</h1><p>Inspect assigned vehicles and submit findings for review.</p></div></div>
-      <div className="mechanic-grid">
-        <section className="panel mechanic-list" aria-labelledby="assigned-title">
-          <div className="list-heading"><div><h2 id="assigned-title">Assigned to me</h2><p className="muted">{myJobs.filter(isOpen).length} active jobs</p></div><span className="detail-icon"><FiClipboard aria-hidden="true" /></span></div>
-          <div className="mechanic-filter">
-            <button type="button" aria-pressed={!showClosed} onClick={() => setShowClosed(false)}>Active</button>
-            <button type="button" aria-pressed={showClosed} onClick={() => setShowClosed(true)}>Submitted / closed</button>
+    <Workspace role="mechanic" name={mechanic?.name ?? "Mechanic"} photo={mechanic?.photo} garage={profile.name} tab={tab} tabs={mechanicTabs} onTab={setTab}>
+      {tab === "Dashboard" && (
+        <>
+          <div className="dashboard-banner mechanic-banner"><div><p className="banner-label">Mechanic dashboard</p><h1>Hi, {mechanic?.name.split(" ")[0] ?? "mechanic"}</h1><p>{profile.name}</p></div><button className="button banner-button" type="button" onClick={() => setTab("My Jobs")}>My jobs <FiArrowRight aria-hidden="true" /></button></div>
+          <div className="metric-grid mechanic-metrics" aria-label="My job totals">
+            {metrics.map(({ label, count, icon: Icon, tone }) => <article className="panel finance-total" key={label}><span className={`metric-icon tone-${tone}`}><Icon aria-hidden="true" /></span><span className="metric-label">{label}</span><strong>{count}</strong></article>)}
           </div>
-          <ul>
-            {visibleJobs.map((job) => (
-              <li key={job.id}><button type="button" className="mechanic-job" aria-pressed={selectedJob?.id === job.id} onClick={() => {
-                setSelectedId(job.id);
-                if (window.matchMedia("(max-width: 840px)").matches) document.getElementById("inspection-report")?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}>
-                <span className="vehicle-icon"><FiTool aria-hidden="true" /></span>
-                <span className="mechanic-job-name"><strong>{job.vehicle}</strong><small>{job.id} · {job.service}</small></span>
-                <Status status={job.status} />
-              </button></li>
-            ))}
-          </ul>
-          {!visibleJobs.length && <p className="empty-state">No jobs in this view.</p>}
-        </section>
-        {selectedJob && <ReportEditor key={selectedJob.id} job={selectedJob} onSubmitted={() => setShowClosed(true)} />}
-      </div>
+          <section className="panel dashboard-list mechanic-next" aria-labelledby="next-jobs-title">
+            <div className="list-heading"><div><h2 id="next-jobs-title">Next jobs</h2><p className="muted">Pick a vehicle to open its inspection.</p></div><span className="detail-icon"><FiTool aria-hidden="true" /></span></div>
+            <ul>{openJobs.map((job) => <li key={job.id}><button type="button" className="dashboard-job" onClick={() => jumpToJob(job)}><span className="vehicle-icon"><FiTool aria-hidden="true" /></span><span><strong>{job.vehicle}</strong><small>{job.id} · {job.service}</small></span><Status status={job.status} /><FiArrowRight className="next-job-arrow" aria-hidden="true" /></button></li>)}</ul>
+            {!openJobs.length && <p className="empty-state">No active jobs assigned.</p>}
+          </section>
+        </>
+      )}
+
+      {tab === "Profile" && (
+        <>
+          <div className="page-heading"><div><h1>My profile</h1><p>Manage your photo and contact information.</p></div></div>
+          {mechanic && <MechanicProfile mechanic={mechanic} />}
+        </>
+      )}
+
+      {tab === "My Jobs" && (
+        <>
+          <div className="page-heading"><div><h1>My jobs</h1><p>Open a vehicle to work on its inspection.</p></div></div>
+          <div className="mechanic-grid">
+            <section className="panel mechanic-list" aria-labelledby="assigned-title">
+              <div className="list-heading"><div><h2 id="assigned-title">Job list</h2><p className="muted">{openJobs.length} active jobs</p></div><span className="detail-icon"><FiClipboard aria-hidden="true" /></span></div>
+              <div className="segmented mechanic-filter">
+                <button type="button" aria-pressed={!showClosed} onClick={() => setShowClosed(false)}>Active</button>
+                <button type="button" aria-pressed={showClosed} onClick={() => setShowClosed(true)}>Submitted / closed</button>
+              </div>
+              <ul>
+                {visibleJobs.map((job) => (
+                  <li key={job.id}><button type="button" className="mechanic-job" aria-pressed={selectedJob?.id === job.id} onClick={() => {
+                    setSelectedId(job.id);
+                    if (window.matchMedia("(max-width: 840px)").matches) document.getElementById("inspection-report")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}>
+                    <span className="vehicle-icon"><FiTool aria-hidden="true" /></span>
+                    <span className="mechanic-job-name"><strong>{job.vehicle}</strong><small>{job.id} · {job.service}</small><Status status={job.status} /></span>
+                    <FiArrowRight className="next-job-arrow" aria-hidden="true" />
+                  </button></li>
+                ))}
+              </ul>
+              {!visibleJobs.length && <p className="empty-state">No jobs in this view.</p>}
+            </section>
+            {selectedJob && <ReportEditor key={selectedJob.id} job={selectedJob} onSubmitted={() => setShowClosed(true)} />}
+          </div>
+        </>
+      )}
     </Workspace>
   );
 }
