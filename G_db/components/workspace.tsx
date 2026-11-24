@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FiArrowUpRight, FiBriefcase, FiClipboard, FiCreditCard, FiGrid, FiTool, FiUser, FiUsers } from "react-icons/fi";
 import type { IconType } from "react-icons";
 import type { JobStatus } from "./demo-state";
+import { ThemeToggle } from "./theme-toggle";
 
 export type OwnerTab = "Dashboard" | "Jobs" | "Mechanics" | "Finance" | "Garage Profile";
 export type MechanicTab = "Dashboard" | "My Jobs" | "Profile";
@@ -68,6 +69,7 @@ export function Workspace<T extends string>({ role, name, photo, garage, tab, ta
           <div className="mobile-brand"><span className="brand-mark"><FiTool aria-hidden="true" /></span><span><strong>Parts Arc</strong><small>{isOwner ? garage : "Mechanic workspace"}</small></span></div>
           <div className="header-account">
             <span className="preview-tag">Local preview</span>
+            <ThemeToggle />
             <details className="account-menu">
               <summary className="account" aria-label={`Account menu for ${name}`}>
                 <span className="avatar" aria-hidden="true">{photo ? <img src={photo} alt="" /> : initials}</span><span>{name}</span>

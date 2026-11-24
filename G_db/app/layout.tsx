@@ -6,7 +6,9 @@ import "@fontsource/manrope/latin-500.css";
 import "@fontsource/manrope/latin-600.css";
 import "@fontsource/manrope/latin-700.css";
 import "@fontsource/manrope/latin-800.css";
+import { initializeGarageTheme } from "../components/theme-preference";
 import "./garage.css";
+import "./garage-dark.css";
 
 export const metadata: Metadata = {
   title: {
@@ -17,5 +19,10 @@ export const metadata: Metadata = {
 };
 
 export default function GarageLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: initializeGarageTheme }} /></head>
+      <body>{children}</body>
+    </html>
+  );
 }

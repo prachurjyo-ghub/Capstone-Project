@@ -351,3 +351,18 @@ input[type="checkbox"] { accent-color: var(--blue); width: 17px; height: 17px; f
   .profile-form .form-grid { gap: 12px; }
   .profile-photo-actions { width: 100%; margin-left: 0; }
 }
+
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 17px;
+}
+.theme-toggle:hover { background: #edf3ff; }
