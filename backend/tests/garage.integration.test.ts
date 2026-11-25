@@ -17,7 +17,7 @@ const email = (prefix: string) => `${prefix}-${fixture}@garage.test`;
 const username = (prefix: string) => `${prefix}-${fixture}`;
 const password = "AcceptancePassword123";
 const storage = mkdtempSync(join(tmpdir(), "garage-test-"));
-const env = { ...loadEnv(), REQUEST_ATTACHMENT_DIR: join(storage, "attachments") };
+const env = { ...loadEnv(), REQUEST_ATTACHMENT_DIR: join(storage, ".local", "attachments") };
 const app = createApp(env, createLogger());
 const api = (path: string) => env.API_PREFIX + path;
 const garageIds: string[] = [];

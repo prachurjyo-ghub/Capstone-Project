@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { AccountStatus, Prisma, UserRole, type GarageJobStatus, type PrismaClient } from "@prisma/client";
-import express, { Router, type Request, type Response } from "express";
+import express, { Router, type NextFunction, type Request, type Response } from "express";
 import type { Env } from "../../config/env.js";
 import { createAuthenticateMiddleware, requireRoles } from "../../middleware/authenticate.js";
 import { AppError } from "../../shared/errors/app-error.js";
@@ -156,11 +156,21 @@ export function createGarageRoutes(database: PrismaClient, env: Env, auth: AuthS
     return { temporaryPassword: pw };
   }
 
-  function fileResponse(res: Response, file: { id: string; mimeType: string; name: string }) {
+  function fileResponse(res: Response, next: NextFunction, file: { id: string; mimeType: string; name: string }) {
     res.setHeader("Cache-Control", "private, no-store");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.contentType(file.mimeType);
-    res.download(resolve(files, file.id), file.name);
+    res.download(file.id, file.name, { root: files, dotfiles: "allow" }, (error) => {
+      if (!error) return;
+      if (!res.headersSent) {
+        res.removeHeader("Content-Type");
+        next("status" in error && error.status === 404
+          ? new AppError("Garage evidence file was not found", { code: "GARAGE_EVIDENCE_UNAVAILABLE", statusCode: 404 })
+          : error);
+        return;
+      }
+      next(error);
+    });
   }
 
   router.get("/garages", async (req, res) => {
@@ -436,10 +446,10 @@ export function createGarageRoutes(database: PrismaClient, env: Env, auth: AuthS
     await unlink(resolve(files, file.id)).catch(() => undefined);
     res.sendStatus(204);
   });
-  router.get("/garage/jobs/:jobId/evidence/:fileId", authenticate, garageOnly, async (req, res) => {
+  router.get("/garage/jobs/:jobId/evidence/:fileId", authenticate, garageOnly, async (req, res, next) => {
     const member = await access(req);
     const job = await findJob(req, member);
-    fileResponse(res, job.evidence.find((item) => item.id === schema.id.parse(req.params.fileId)) ?? missing());
+    fileResponse(res, next, job.evidence.find((item) => item.id === schema.id.parse(req.params.fileId)) ?? missing());
   });
 
   router.post("/garage/ledger", authenticate, garageOnly, async (req, res) => {
@@ -474,11 +484,11 @@ export function createGarageRoutes(database: PrismaClient, env: Env, auth: AuthS
       share: { is: { revokedAt: null } } }, data: { evidenceRequested: true, version: { increment: 1 } } })).count) return missing();
     successful(res, req, { requested: true });
   });
-  router.get("/customers/me/garage-reports/:jobId/evidence/:fileId", authenticate, customer, async (req, res) => {
+  router.get("/customers/me/garage-reports/:jobId/evidence/:fileId", authenticate, customer, async (req, res, next) => {
     const fileId = schema.id.parse(req.params.fileId);
     const file = await database.garageEvidence.findFirst({ where: { id: fileId, jobId: schema.id.parse(req.params.jobId),
       job: { customer: { userId: req.auth!.id }, share: { is: { revokedAt: null, evidenceIds: { has: fileId } } } } } });
-    fileResponse(res, file ?? missing());
+    fileResponse(res, next, file ?? missing());
   });
 
   return router;
