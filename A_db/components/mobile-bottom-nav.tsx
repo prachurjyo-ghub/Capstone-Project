@@ -29,6 +29,7 @@ const direct = [
 const more = [
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/suppliers", label: "Suppliers", icon: Building2 },
+  { href: "/garages", label: "Garages", icon: Building2 },
   { href: "/subscriptions", label: "Subscriptions", icon: BadgeDollarSign },
   { href: "/catalogue", label: "Catalogue", icon: Boxes },
   { href: "/finance", label: "Finance", icon: CircleDollarSign },

@@ -48,6 +48,7 @@ const groups: Array<[string, Array<[string, string, LucideIcon]>]> = [
     [
       ["Customers", "/customers", Users],
       ["Suppliers", "/suppliers", Building2],
+      ["Garages", "/garages", Building2],
       ["Subscriptions", "/subscriptions", BadgeDollarSign],
       ["Catalogue", "/catalogue", Boxes],
     ],

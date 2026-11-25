@@ -2003,6 +2003,7 @@ export function DashboardPage() {
               )}
             </button>
           ))}
+          <Link href="/garage-reports" className="dashboard-nav-item"><FiTool size={18} aria-hidden="true" /><span>Garage Reports</span></Link>
         </nav>
         <div className="min-w-0">
           {dashboardView === "overview" && <Overview />}

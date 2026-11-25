@@ -1,7 +1,7 @@
 import type { Request } from "express";
 import { AppError } from "../../shared/errors/app-error.js";
 
-const authClients = ["customer", "supplier", "admin"] as const;
+const authClients = ["customer", "supplier", "admin", "garage"] as const;
 export type AuthClient = (typeof authClients)[number];
 
 export function resolveAuthClient(req: Request): AuthClient | undefined {

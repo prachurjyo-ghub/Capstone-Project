@@ -42,8 +42,9 @@ Each portal runs in its own terminal. Copy its `.env.example` to `.env.local` an
 | Portal | Directory | Start command | Local URL |
 | --- | --- | --- | --- |
 | Customer | `C_frontend` | `npm run dev -- -H localhost` | `http://localhost:3000` |
-| Supplier, after Part 2 | `S_db` | `npm run dev -- -H localhost -p 3001` | `http://localhost:3001` |
-| Admin, after Part 2 | `A_db` | `npm run dev -- -H localhost` | `http://localhost:3002` |
+| Supplier | `S_db` | `npm run dev -- -H localhost -p 3001` | `http://localhost:3001` |
+| Admin | `A_db` | `npm run dev -- -H localhost` | `http://localhost:3002` |
+| Garage owner and mechanic | `G_db` | `npm run dev -- -H localhost` | `http://localhost:3003/login` |
 
 ## Accounts and assets
 
@@ -52,6 +53,12 @@ The migrations initialize the schema. Create demonstration data later through th
 - Keep storefront assets under [`C_frontend/public/assets`](C_frontend/public/assets). The app serves them at `/assets/...`, which is the format accepted by catalogue image fields. The storefront retains the existing asset credits.
 - Customer photos and message attachments are stored in `backend/.local/request-attachments`. Supplier listing uploads use `backend/.local/request-attachments-listing-images`. Use the portal upload flows so the API maintains access rules and image approval.
 - Password reset and invitation links are written to `backend/.local/recovery-outbox`. The worker writes local notification deliveries to `backend/.local/notification-outbox`. Use test addresses such as `customer@example.test`.
+
+### Garage inspection
+
+Admin creates the garage and owner under **Garages**. Share the temporary password privately. The owner signs in to `G_db`, changes the password, completes the public profile and creates mechanic accounts. Customers use **Garages** to search and **Garage Reports** on their account dashboard for reports shared with them. The owner must enter an existing customer's account email when creating a job.
+
+Inspection media is stored privately in `backend/.local/request-attachments-garage-evidence` by default. Customers can download specific files after the owner shares them in response to a request. Keep this directory with the local database if you need to restore reports with their original evidence. See [Garage inspection workflow](docs/garage-inspection.md).
 
 ## Verify and stop
 

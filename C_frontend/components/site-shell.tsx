@@ -180,8 +180,9 @@ export function SiteShell({ children }: { children: ReactNode }) {
   }, [dialog, menuOpen])
   const nav = [
     { label: 'Find Parts', href: '/parts' },
+    { label: 'Find a Garage', href: '/garages' },
     { label: 'How Sourcing Works', href: '/#how' },
-    { label: 'Garages & Fleets', href: '/#fleet' },
+    { label: 'Garage & Fleet Sourcing', href: '/#fleet' },
     { label: 'Emergency', href: '/#emergency' },
   ]
   const accountAction = () =>
