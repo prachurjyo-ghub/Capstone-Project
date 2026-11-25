@@ -1,0 +1,98 @@
+.garage-login {
+  --login-background: #ecebe7;
+  --login-surface: #fbfaf7;
+  --login-ink: #24241f;
+  --login-muted: #58584f;
+  --login-line: #dedcd3;
+  --login-accent: #f1a766;
+  --login-accent-soft: #fff1e3;
+  --login-link: #934715;
+  --login-control: #fff;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(440px, .88fr);
+  min-height: 100dvh;
+  padding: clamp(12px, 2.3vw, 34px);
+  background: var(--login-background);
+  color: var(--login-ink);
+}
+
+[data-theme="dark"] .garage-login {
+  --login-background: #1b1c1e;
+  --login-surface: #262729;
+  --login-ink: #f4f4f3;
+  --login-muted: #c1c1ba;
+  --login-line: #464749;
+  --login-accent-soft: #49382d;
+  --login-link: #ffc494;
+  --login-control: #2e2f31;
+}
+
+.garage-login-photo {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 610px;
+  color: #fff;
+  border-radius: 20px 0 0 20px;
+  padding: clamp(26px, 4vw, 66px);
+  background: linear-gradient(180deg, #121416be, #12141612 46%, #121416ec 100%),
+    #222527 url("/garage-workshop.webp") center 48% / cover no-repeat;
+}
+.garage-login-brand { display: flex; align-items: center; gap: 12px; font: 800 22px var(--heading); letter-spacing: -.05em; }
+.garage-login-brand > span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--login-accent); color: #25241f; font-size: 19px; }
+.garage-login-caption { max-width: 430px; }
+.garage-login-caption p { font: 800 clamp(36px, 5vw, 76px)/1 var(--heading); letter-spacing: -.065em; }
+.garage-login-caption > span { display: block; margin-top: 16px; font-size: clamp(14px, 1.4vw, 18px); color: #eeeae5; }
+
+.garage-login-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--login-surface);
+  border: 1px solid var(--login-line);
+  border-left: 0;
+  border-radius: 0 20px 20px 0;
+  padding: clamp(18px, 3vw, 44px);
+  padding-bottom: clamp(26px, 4vw, 56px);
+}
+.garage-login-toolbar { display: flex; justify-content: flex-end; }
+.garage-login-inner { width: min(100%, 414px); align-self: center; justify-self: center; }
+.garage-login-inner h1 { font-size: clamp(30px, 3.3vw, 48px); margin-bottom: 24px; }
+.garage-login-form { display: grid; gap: 15px; }
+.garage-login-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 0; padding: 0; margin: 0; gap: 8px; min-width: 0; }
+.garage-login-roles legend { padding: 0; margin-bottom: 7px; font-weight: 700; }
+.garage-login-roles label { cursor: pointer; }
+.garage-login-role { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 47px; padding: 7px; text-align: center; border-radius: 8px; border: 1px solid var(--login-line); background: var(--login-control); font-weight: 700; }
+.garage-login-role svg { flex: none; font-size: 17px; }
+.garage-login-roles input:checked + span { background: var(--login-accent-soft); border-color: var(--login-link); color: var(--login-link); }
+.garage-login-roles input:focus-visible + span { outline: 3px solid var(--login-link); outline-offset: 3px; }
+.garage-login-field { display: grid; gap: 6px; font-weight: 700; }
+.garage-login-field > span { position: relative; display: block; }
+.garage-login-field > span > svg { position: absolute; top: 50%; left: 13px; transform: translateY(-50%); color: var(--login-muted); pointer-events: none; font-size: 16px; }
+.garage-login .garage-login-field input:not([type="checkbox"]):not([type="file"]) { height: 48px; background: var(--login-control); color: var(--login-ink); border: 1px solid var(--login-line); font-size: 16px; font-weight: 400; }
+.garage-login-field > span > input:not([type="checkbox"]):not([type="file"]) { padding-left: 39px; }
+.garage-login-field input::placeholder { color: var(--login-muted); opacity: 1; }
+.garage-login-password { position: relative; }
+.garage-login-password input:not([type="checkbox"]):not([type="file"]) { padding-right: 47px; }
+.garage-login-eye { position: absolute; right: 4px; bottom: 4px; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 5px; background: transparent; color: var(--login-muted); font-size: 17px; }
+.garage-login-link { display: inline-flex; align-items: center; gap: 7px; min-height: 33px; border: 0; border-radius: 5px; padding: 0; background: transparent; color: var(--login-link); font-weight: 700; }
+.garage-login-link:hover { text-decoration: underline; }
+.garage-login-forgot { justify-self: end; margin-block: -7px -5px; }
+.garage-login-back { margin-bottom: 14px; }
+.garage-login-help { color: var(--login-muted); line-height: 1.55; }
+.garage-login-submit { position: relative; display: grid; place-items: center; min-height: 49px; padding: 8px 42px; border: 0; border-radius: 8px; background: var(--login-accent); color: #251f19; font-weight: 800; font-size: 15px; }
+.garage-login-submit:hover { background: #ef9750; }
+.garage-login-submit:disabled { opacity: .68; }
+.garage-login-submit svg { position: absolute; right: 16px; font-size: 18px; }
+.garage-login-confirmation { display: grid; place-items: center; background: var(--login-accent-soft); color: var(--login-link); width: 49px; height: 49px; font-size: 25px; border-radius: 12px; margin-bottom: 14px; }
+
+@media (max-width: 760px) {
+  .garage-login { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; padding: 10px; }
+  .garage-login-photo { min-height: 190px; gap: 21px; padding: 18px; border-radius: 15px 15px 0 0; background-position: center 49%; }
+  .garage-login-brand { font-size: 20px; }
+  .garage-login-brand > span { width: 34px; height: 34px; font-size: 16px; }
+  .garage-login-caption p { font-size: clamp(28px, 7.5vw, 42px); }
+  .garage-login-caption > span { display: none; }
+  .garage-login-panel { border: 1px solid var(--login-line); border-top: 0; border-radius: 0 0 15px 15px; padding: 13px 16px 26px; }
+  .garage-login-inner { align-self: start; }
+  .garage-login-inner h1 { margin: 5px 0 20px; padding-right: 3px; }
+}

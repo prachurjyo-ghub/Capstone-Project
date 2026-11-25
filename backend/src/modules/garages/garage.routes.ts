@@ -116,6 +116,7 @@ export function createGarageRoutes(database: PrismaClient, env: Env, auth: AuthS
   const manager = requireRoles(database, UserRole.ADMIN, UserRole.SUPER_ADMIN);
   const customer = requireRoles(database, UserRole.CUSTOMER);
   const garageOnly = requireRoles(database, UserRole.GARAGE_USER);
+  const limits = createAuthRateLimits(env);
   const files = resolve(env.REQUEST_ATTACHMENT_DIR + "-garage-evidence");
 
   async function access(req: Request, owner = false, allowTemporary = false) {
@@ -144,11 +145,16 @@ export function createGarageRoutes(database: PrismaClient, env: Env, auth: AuthS
       data: { ...changes, version: { increment: 1 } } })).count !== 1) stale();
   }
 
-  async function resetMember(memberId: string, req: Request, where: Prisma.GarageMembershipWhereInput) {
+  async function resetMember(memberId: string, req: Request, where: Prisma.GarageMembershipWhereInput, requested = false) {
     const pw = temporaryPassword();
     const passwordHash = await hashPassword(pw);
     await database.$transaction(async (tx) => {
       const member = await tx.garageMembership.findFirst({ where: { id: memberId, ...where } }) ?? missing();
+      if (member.role === "OWNER") {
+        const handled = await tx.garageOwnerRecovery.deleteMany({ where: { memberId: member.id } });
+        if (requested && handled.count === 0)
+          fail("This request has already been handled", "GARAGE_RECOVERY_HANDLED", 409);
+      }
       await tx.user.update({ where: { id: member.userId }, data: { passwordHash, mustChangePassword: true } });
       await tx.refreshSession.updateMany({ where: { userId: member.userId, revokedAt: null }, data: { revokedAt: new Date() } });
       await recordAudit(tx, { actorUserId: req.auth!.id, requestId: req.requestId, entityType: "GARAGE_MEMBERSHIP", entityId: member.id, action: "GARAGE_CREDENTIAL_RESET" });
@@ -231,7 +237,45 @@ export function createGarageRoutes(database: PrismaClient, env: Env, auth: AuthS
     successful(res, req, await resetMember(owner.id, req, { garageId, role: "OWNER" }));
   });
 
-  router.post("/garage/auth/login", createAuthRateLimits(env).login, async (req, res) => {
+  router.get("/admin/garage-owner-recovery", authenticate, manager, async (req, res) => {
+    const entries = await database.garageOwnerRecovery.findMany({
+      where: { member: { active: true, garage: active(), user: { accountStatus: AccountStatus.ACTIVE } } },
+      orderBy: { requestedAt: "asc" }, take: 100,
+      include: { member: { select: { username: true, garage: { select: { name: true } }, user: { select: { fullName: true, email: true } } } } },
+    });
+    res.setHeader("Cache-Control", "no-store");
+    successful(res, req, entries.map(({ memberId, requestedAt, member }) => ({
+      memberId, requestedAt, username: member.username, garageName: member.garage.name,
+      ownerName: member.user.fullName, email: member.user.email,
+    })));
+  });
+
+  router.post("/admin/garage-owner-recovery/:memberId/reset", authenticate, manager, async (req, res) => {
+    const memberId = schema.id.parse(req.params.memberId);
+    const member = await database.garageMembership.findFirst({
+      where: { id: memberId, role: "OWNER", active: true, garage: active(), user: { accountStatus: AccountStatus.ACTIVE } },
+      select: { user: { select: { email: true } } },
+    }) ?? missing();
+    const credentials = await resetMember(memberId, req, {
+      role: "OWNER", active: true, garage: active(), user: { accountStatus: AccountStatus.ACTIVE, email: member.user.email },
+    }, true);
+    res.setHeader("Cache-Control", "no-store");
+    successful(res, req, { ...credentials, email: member.user.email });
+  });
+
+  router.post("/garage/auth/forgot-password", limits.recovery, async (req, res) => {
+    const input = schema.ownerRecovery.parse(req.body);
+    const member = await database.garageMembership.findFirst({
+      where: { username: input.username, role: "OWNER", active: true, garage: active(),
+        user: { email: input.email, accountStatus: AccountStatus.ACTIVE } },
+      select: { id: true },
+    });
+    if (member) await database.garageOwnerRecovery.createMany({ data: { memberId: member.id }, skipDuplicates: true });
+    res.setHeader("Cache-Control", "no-store");
+    successful(res, req, { accepted: true }, 202);
+  });
+
+  router.post("/garage/auth/login", limits.login, async (req, res) => {
     const input = schema.signIn.parse(req.body);
     const member = await database.garageMembership.findUnique({
       where: { username: input.username }, include: { garage: true, user: { select: { email: true } } },

@@ -18,6 +18,7 @@ export const createGarage = credentials.extend({
 export const signIn = z.object({
   username, password: z.string().min(1).max(128), role: z.enum(["OWNER", "MECHANIC"]),
 }).strict();
+export const ownerRecovery = z.object({ username, email }).strict();
 export const directory = z.object({
   area: z.enum(garageAreas), service: z.enum(garageServices).optional(), type: z.enum(garageTypes).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),

@@ -113,6 +113,9 @@ export async function login(username: string, password: string, role: GarageRole
     throw error;
   }
 }
+export function requestOwnerRecovery(username: string, email: string) {
+  return api("/garage/auth/forgot-password", json("POST", { username, email }), false);
+}
 export const garageIdentity = () => api<GarageIdentity>("/garage/me");
 export async function changePassword(currentPassword: string, newPassword: string) {
   await api("/auth/change-password", json("POST", { currentPassword, newPassword }));

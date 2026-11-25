@@ -147,6 +147,28 @@ describe("Garage inspection", () => {
     await post(job + "/action", owner).send({ action: "share" }).expect(200);
     await post(job + "/action", owner).send({ action: "evidence", evidenceIds: [fileId] }).expect(200);
     await post(job + "/action", owner).send({ action: "close" }).expect(200);
+    const recoveryPath = "/admin/garage-owner-recovery";
+    const askForRecovery = (name: string, address: string) => request(app)
+      .post(api("/garage/auth/forgot-password")).send({ username: name, email: address }).expect(202);
+    const unmatched = await askForRecovery(username("owner"), email("outsider"));
+    await askForRecovery(username("mechanic"), email("mechanic"));
+    await get(recoveryPath, admin).expect(200).expect(({ body }) => expect(body.data).toEqual([]));
+    const matched = await askForRecovery(username("owner"), email("owner").toUpperCase());
+    expect(matched.body.data).toEqual(unmatched.body.data);
+    await askForRecovery(username("owner"), email("owner"));
+    await get(recoveryPath, client).expect(403);
+    const queue = await get(recoveryPath, admin).expect(200);
+    expect(queue.body.data).toHaveLength(1);
+    expect(queue.body.data[0].email).toBe(email("owner"));
+    const resetPath = recoveryPath + "/" + queue.body.data[0].memberId + "/reset";
+    await post(resetPath, client).expect(403);
+    const reset = await post(resetPath, admin).expect(200);
+    expect(reset.body.data.email).toBe(email("owner"));
+    await post(resetPath, admin).expect(409);
+    await get(recoveryPath, admin).expect(200).expect(({ body }) => expect(body.data).toEqual([]));
+    await get("/garage/workspace", owner).expect(401);
+    await garageLogin(username("owner"), password, "OWNER").expect(401);
+    await activate("owner", reset.body.data.temporaryPassword, "OWNER");
     await post(`/admin/garages/${garage.garageId}/reset-owner`, admin).expect(200);
     await get("/garage/workspace", owner).expect(401);
     await post(`/admin/garages/${garage.garageId}/terminate`, admin).expect(200);

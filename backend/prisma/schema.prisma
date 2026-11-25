@@ -2619,9 +2619,19 @@ model GarageMembership {
   garage    Garage     @relation(fields: [garageId], references: [id], onDelete: Restrict)
   user      User       @relation(fields: [userId], references: [id], onDelete: Restrict)
   assigned  GarageJob[]
+  ownerRecovery GarageOwnerRecovery?
 
   @@index([garageId, role, active])
   @@map("garage_memberships")
+}
+
+model GarageOwnerRecovery {
+  memberId    String           @id @db.Uuid
+  requestedAt DateTime         @default(now())
+  member      GarageMembership @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([requestedAt])
+  @@map("garage_owner_recovery_requests")
 }
 
 enum GarageJobStatus {
