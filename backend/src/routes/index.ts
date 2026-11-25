@@ -1,3 +1,4 @@
+import { createGarageRoutes } from "../modules/garages/garage.routes.js";
 import type { PrismaClient } from "@prisma/client";
 import { Router } from "express";
 import type { Env } from "../config/env.js";
@@ -135,6 +136,7 @@ export function createApiRouter(
     "/admin/jobs",
     createAdminJobRouter(database, env, matchingClock, listingImageStorage),
   );
+  router.use(createGarageRoutes(database, env, authService));
   router.use("/auth", createAuthRouter(database, env, authService));
   router.use("/customers", createCustomerRouter(database, env, customerService));
   router.use(

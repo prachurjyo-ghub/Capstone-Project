@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { FiArrowUpRight, FiBriefcase, FiClipboard, FiCreditCard, FiGrid, FiTool, FiUser, FiUsers } from "react-icons/fi";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { FiLogOut, FiBriefcase, FiClipboard, FiCreditCard, FiGrid, FiTool, FiUser, FiUsers } from "react-icons/fi";
 import type { IconType } from "react-icons";
-import type { JobStatus } from "./demo-state";
+import { logout, useWorkspaceError, type JobStatus } from "./workspace-state";
 import { ThemeToggle } from "./theme-toggle";
 
 export type OwnerTab = "Dashboard" | "Jobs" | "Mechanics" | "Finance" | "Garage Profile";
@@ -26,7 +27,7 @@ export const mechanicTabs: readonly NavItem<MechanicTab>[] = [
 export function Workspace<T extends string>({ role, name, photo, garage, tab, tabs, onTab, children }: {
   role: "owner" | "mechanic";
   name: string;
-  photo?: string;
+  photo?: string | null;
   garage: string;
   tab: T;
   tabs: readonly NavItem<T>[];
@@ -35,7 +36,18 @@ export function Workspace<T extends string>({ role, name, photo, garage, tab, ta
 }) {
   const isOwner = role === "owner";
   const initials = name.trim().split(/\s+/).map((word) => word[0]).slice(0, 2).join("");
-  const otherRole = isOwner ? { href: "/mechanic", label: "Mechanic preview" } : { href: "/owner", label: "Owner preview" };
+  const router = useRouter();
+  const error = useWorkspaceError();
+  const [signOutError, setSignOutError] = useState("");
+
+  async function signOut() {
+    try {
+      await logout();
+      router.replace("/login");
+    } catch (error) {
+      setSignOutError(error instanceof Error ? error.message : "Unable to sign out.");
+    }
+  }
 
   function nav(mobile: boolean) {
     return tabs.map(({ label, shortLabel, icon: Icon }) => (
@@ -60,7 +72,7 @@ export function Workspace<T extends string>({ role, name, photo, garage, tab, ta
         </div>
         <div className="sidebar-garage"><span className="garage-indicator" />{garage}</div>
         <nav className="workspace-nav" aria-label="Desktop workspace">{nav(false)}</nav>
-        <div className="sidebar-footer"><Link className="preview-switch" href={otherRole.href}>{otherRole.label}<FiArrowUpRight aria-hidden="true" /></Link></div>
+        <div className="sidebar-footer"><button type="button" className="button secondary" onClick={signOut}>Sign out <FiLogOut aria-hidden="true" /></button></div>
       </aside>
 
       <div className="workspace-body">
@@ -68,7 +80,6 @@ export function Workspace<T extends string>({ role, name, photo, garage, tab, ta
           <span className="header-context">{isOwner ? "Garage Owner" : "Mechanic Workspace"}</span>
           <div className="mobile-brand"><span className="brand-mark"><FiTool aria-hidden="true" /></span><span><strong>Parts Arc</strong><small>{isOwner ? garage : "Mechanic workspace"}</small></span></div>
           <div className="header-account">
-            <span className="preview-tag">Local preview</span>
             <ThemeToggle />
             <details className="account-menu">
               <summary className="account" aria-label={`Account menu for ${name}`}>
@@ -77,12 +88,12 @@ export function Workspace<T extends string>({ role, name, photo, garage, tab, ta
               <div className="account-popover">
                 <strong>{name}</strong>
                 <p>{isOwner ? "Garage owner" : "Mechanic"}</p>
-                <Link href={otherRole.href}>{otherRole.label}<FiArrowUpRight aria-hidden="true" /></Link>
+                <button type="button" className="button secondary" onClick={signOut}>Sign out <FiLogOut aria-hidden="true" /></button>
               </div>
             </details>
           </div>
         </header>
-        <main className="workspace-content" id="garage-main">{children}</main>
+        <main className="workspace-content" id="garage-main">{(error || signOutError) && <p className="form-error" role="alert">{error || signOutError}</p>}{children}</main>
       </div>
 
       <nav className={`mobile-workspace-nav mobile-workspace-${role}`} aria-label="Mobile workspace">{nav(true)}</nav>

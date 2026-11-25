@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { FiArrowDownLeft, FiArrowUpRight, FiEdit2, FiPlus, FiTrash2, FiTrendingUp, FiX } from "react-icons/fi";
-import { removeFinanceEntry, saveFinanceEntry, type FinanceEntry } from "./demo-state";
+import { removeFinanceEntry, saveFinanceEntry, type FinanceEntry } from "./workspace-state";
 import { GarageSelect } from "./ui/select";
 
 const number = new Intl.NumberFormat("en-BD", { maximumFractionDigits: 2 });
@@ -56,21 +56,23 @@ export function FinanceView({ entries }: { entries: FinanceEntry[] }) {
     dialog.current?.showModal();
   }
 
-  function save(event: FormEvent<HTMLFormElement>) {
+  async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const amount = parseAmount(String(data.get("amount")).trim());
     const description = String(data.get("description")).trim();
     if (!amount || !description) {
       setError("Enter a description and a positive amount with up to two decimal places.");
       return;
     }
-    saveFinanceEntry({
-      id: editing?.id ?? crypto.randomUUID(), amount, description, date: String(data.get("date")),
+    const saved = await saveFinanceEntry({
+      amount, description, date: String(data.get("date")),
       kind: data.get("kind") === "Expense" ? "Expense" : "Revenue",
-    });
+    }, editing?.id);
+    if (!saved) return;
     setVisibleKind("All entries");
-    event.currentTarget.reset();
+    form.reset();
     dialog.current?.close();
   }
 

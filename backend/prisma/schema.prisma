@@ -21,6 +21,7 @@ enum UserRole {
   SUPPLIER_STAFF
   ADMIN
   SUPER_ADMIN
+  GARAGE_USER
 }
 
 enum AccountStatus {
@@ -447,6 +448,7 @@ model User {
   updatedAt          DateTime      @updatedAt
 
   customerProfile              CustomerProfile?
+  garageMembership             GarageMembership?
   supplierMemberships          SupplierUser[]
   invitationsSent              AccountInvitation[]           @relation("InvitationInviter")
   invitationsAccepted          AccountInvitation[]           @relation("InvitationAcceptor")
@@ -517,6 +519,7 @@ model CustomerProfile {
   updatedAt     DateTime @updatedAt
 
   user                 User                          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  garageJobs           GarageJob[]
   addresses            CustomerAddress[]
   vehicles             Vehicle[]
   sourcingRequests     SourcingRequest[]
@@ -2571,4 +2574,127 @@ model AuditLog {
   @@index([requestId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+enum GarageRole {
+  OWNER
+  MECHANIC
+}
+
+model Garage {
+  id           String   @id @default(uuid()) @db.Uuid
+  slug         String   @unique
+  name         String
+  contactPhone String
+  endsAt       DateTime
+  terminatedAt DateTime?
+  amount       Int?
+  area         String   @default("")
+  type         String   @default("")
+  address      String   @default("")
+  phone        String   @default("")
+  hours        String   @default("")
+  description  String   @default("")
+  services     String[] @default([])
+  published    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  members      GarageMembership[]
+  jobs         GarageJob[]
+  ledger       GarageLedgerEntry[]
+
+  @@index([published, area, type])
+  @@map("garages")
+}
+
+model GarageMembership {
+  id        String     @id @default(uuid()) @db.Uuid
+  garageId  String     @db.Uuid
+  userId    String     @unique @db.Uuid
+  username  String     @unique
+  role      GarageRole
+  active    Boolean    @default(true)
+  phone     String     @default("")
+  specialty String     @default("")
+  photo     String?
+  garage    Garage     @relation(fields: [garageId], references: [id], onDelete: Restrict)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  assigned  GarageJob[]
+
+  @@index([garageId, role, active])
+  @@map("garage_memberships")
+}
+
+enum GarageJobStatus {
+  UNASSIGNED
+  ASSIGNED
+  DRAFT
+  SUBMITTED
+  SHARED
+  CLOSED
+}
+
+model GarageJob {
+  id                String          @id @default(uuid()) @db.Uuid
+  garageId          String          @db.Uuid
+  customerId        String          @db.Uuid
+  mechanicId        String?         @db.Uuid
+  vehicle           String
+  registration      String          @default("")
+  service           String
+  concern           String          @default("")
+  consentAt         DateTime?
+  status            GarageJobStatus @default(UNASSIGNED)
+  version           Int             @default(0)
+  report            Json?
+  quotation         Json?
+  evidenceRequested Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  garage            Garage          @relation(fields: [garageId], references: [id], onDelete: Restrict)
+  customer          CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  mechanic          GarageMembership? @relation(fields: [mechanicId], references: [id], onDelete: Restrict)
+  evidence          GarageEvidence[]
+  share             GarageShare?
+
+  @@index([garageId, createdAt])
+  @@index([mechanicId, status])
+  @@index([customerId])
+  @@map("garage_jobs")
+}
+
+model GarageEvidence {
+  id        String    @id @default(uuid()) @db.Uuid
+  jobId     String    @db.Uuid
+  name      String
+  mimeType  String
+  size      Int
+  createdAt DateTime  @default(now())
+  job       GarageJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
+
+  @@index([jobId])
+  @@map("garage_evidence")
+}
+
+model GarageShare {
+  jobId       String    @id @db.Uuid
+  report      Json
+  quotation   Json?
+  evidenceIds String[]  @db.Uuid
+  sharedAt    DateTime  @default(now())
+  revokedAt   DateTime?
+  job         GarageJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
+
+  @@map("garage_shares")
+}
+
+model GarageLedgerEntry {
+  id          String  @id @default(uuid()) @db.Uuid
+  garageId    String  @db.Uuid
+  kind        String
+  amount      Int
+  description String
+  date        String
+  garage      Garage  @relation(fields: [garageId], references: [id], onDelete: Restrict)
+
+  @@index([garageId, date])
+  @@map("garage_ledger_entries")
 }

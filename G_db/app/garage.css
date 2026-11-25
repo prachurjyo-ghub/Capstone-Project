@@ -366,3 +366,9 @@ input[type="checkbox"] { accent-color: var(--blue); width: 17px; height: 17px; f
   font-size: 17px;
 }
 .theme-toggle:hover { background: #edf3ff; }
+
+.access-page { min-height: 100dvh; display: grid; place-items: center; padding: 20px; }
+.access-card { width: min(100%, 420px); padding: clamp(20px, 5vw, 32px); display: grid; gap: 20px; }
+.access-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.access-header .workspace-brand { padding: 0; }
+.access-card h1 { margin: 0; }

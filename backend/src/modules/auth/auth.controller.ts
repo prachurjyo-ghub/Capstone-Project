@@ -6,7 +6,7 @@ import type { AuthService, RequestMetadata } from "./auth.service.js";
 import { clearAuthCookies, setAuthCookies } from "./auth.cookies.js";
 import { authCookieName, resolveAuthClient } from "./auth-client.js";
 
-function requestMetadata(req: Request): RequestMetadata {
+export function requestMetadata(req: Request): RequestMetadata {
   return {
     requestId: req.requestId,
     ipAddress: req.ip,
@@ -14,7 +14,7 @@ function requestMetadata(req: Request): RequestMetadata {
   };
 }
 
-function publicSession(session: Awaited<ReturnType<AuthService["login"]>>) {
+export function publicSession(session: Awaited<ReturnType<AuthService["login"]>>) {
   return {
     accessToken: session.accessToken,
     tokenType: "Bearer" as const,
@@ -57,6 +57,7 @@ export function createAuthController(service: AuthService, env: Env) {
           refreshToken,
           csrfToken,
           requestMetadata(req),
+          client === "garage",
         );
         setAuthCookies(res, session.refreshToken, session.csrfToken, env, client);
         sendSuccess(res, publicSession(session), 200, req.requestId);

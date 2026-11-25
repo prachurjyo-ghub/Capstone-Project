@@ -83,7 +83,7 @@ Add one **Garages** menu item in `A_db` at `/garages`, available to authorized a
 
 ## Garage portal sign-in
 
-Build one sign-in screen in `G_db` with **Garage Owner** and **Mechanic** choices, then username and password. The API verifies the credentials, garage access and active membership, and confirms that the selected role matches the account. Send owners to **Jobs** and mechanics to **My Jobs**. Protect each workspace route and API action based on the confirmed membership. Garage sessions use a dedicated `garage` cookie namespace so they can coexist with the customer, supplier and admin sessions.
+Build one sign-in screen in `G_db` with **Garage Owner** and **Mechanic** choices, then username and password. The API verifies the credentials, garage access and active membership, and confirms that the selected role matches the account. Open each role’s **Dashboard** after sign-in. Protect each workspace route and API action based on the confirmed membership. Garage sessions use a dedicated `garage` cookie namespace so they can coexist with the customer, supplier and admin sessions.
 
 ## Garage owner workspace
 
@@ -99,9 +99,9 @@ Use five menu items. Keep account actions under the avatar. Start on **Dashboard
 
 Use the garage name set by admin as the initial public name. Require an area, address, valid public phone, garage type and at least one service before showing the profile. The API applies this same eligibility rule to search and direct links. Profile edits become visible on save without an admin approval step.
 
-- **New Job** collects the existing customer account email, a short vehicle label, requested service and an optional complaint. Allow an optional saved-vehicle reference only when it belongs to that customer. Confirm the linked customer before saving. Support one garage per owner in the demo UI.
+- **New Job** collects the existing customer account email, a short vehicle label, requested service and an optional complaint. Allow an optional saved-vehicle reference only when it belongs to that customer. Confirm the linked customer before saving. Support one garage per owner account.
 - **Assign mechanic** lists active mechanics from this garage only. The owner can reassign before a draft exists. For the first release, the API locks assignment once a draft exists and the UI explains why.
-- **Report** shows the mechanic’s findings and lets the owner return them for edits. **Quotation** lists required parts and availability alongside a BDT labour total. Leave part prices out of the quotation. **Evidence** records a customer request and lets the owner choose specific photos or clips. Preview actions prepare the handover in the browser. Connect delivery after the customer profile integration.
+- **Report** shows the mechanic’s findings and lets the owner return them for edits. **Quotation** lists required parts and availability alongside a BDT labour total. Leave part prices out of the quotation. **Evidence** records a customer request and lets the owner choose specific photos or clips. The owner shares the report or quotation to the linked customer account. The customer can request evidence, and the owner selects which files to share.
 - On desktop, use a side navigation and a job table. On mobile, keep the five main actions in a floating bottom bar, with a compact brand-and-account header. Use job cards in place of wide tables and shadcn-style Select controls for menu options.
 
 On a phone, the owner's default screen can start with this layout.
@@ -153,7 +153,7 @@ Keep one Express API and one PostgreSQL database. Run `G_db` alongside the other
 
 Provision the garage, owner identity and membership in one admin operation. Create mechanic identities and memberships from `G_db` under the authenticated owner's garage. Keep one shared list of area, service and garage-type codes for the profile editor and the public search form. Persist reports in PostgreSQL and keep files in the ignored local storage directory.
 
-Use additive migrations. Return only directory fields in public search and details. Check the garage access period, termination state, active membership and job assignment as applicable on every workspace operation, including requests from existing sessions. On customer report and evidence reads, verify that the share is active and belongs to the signed-in customer. Proposed default for prior reports is to preserve customer access to explicitly shared evidence after garage expiry or termination. A mechanic submit locks the draft. An owner can return it for edits before publication. After sharing, keep the submitted content fixed until the owner revokes the share. Store the share and its selected items in one transaction.
+Use additive migrations. Return only directory fields in public search and details. Check the garage access period, termination state, active membership and job assignment as applicable on every workspace operation, including requests from existing sessions. On customer report and evidence reads, verify that the share is active and belongs to the signed-in customer. Preserve customer access to explicitly shared evidence after garage expiry or termination. A mechanic submit locks the draft. An owner can return it for edits before publication. After sharing, keep the inspection findings fixed. The owner can send an updated quotation and manage requested evidence. Store the share and its selected items in one transaction.
 
 Group routes around admin garage management, public garage search and detail, authenticated garage workspace operations, and the customer's shared reports. Derive job labels from the assignment and report state. Start an unassigned job, assign a mechanic, then move through draft and submitted. The owner can close a reviewed job. Customer share access follows the share record independently of job closure.
 

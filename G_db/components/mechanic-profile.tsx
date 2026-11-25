@@ -2,7 +2,7 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { FiCamera, FiCheck, FiUser } from "react-icons/fi";
-import { saveMechanic, type Mechanic } from "./demo-state";
+import { saveMechanicProfile, type Mechanic } from "./workspace-state";
 
 export function MechanicProfile({ mechanic }: { mechanic: Mechanic }) {
   const [photo, setPhoto] = useState<string | undefined>();
@@ -16,8 +16,8 @@ export function MechanicProfile({ mechanic }: { mechanic: Mechanic }) {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = "";
     if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 1024 * 1024) {
-      setError("Choose a JPG, PNG or WebP photo up to 1 MiB.");
+    if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 512 * 1024) {
+      setError("Choose a JPG or PNG photo up to 512 KiB.");
       return;
     }
     const reader = new FileReader();
@@ -29,7 +29,7 @@ export function MechanicProfile({ mechanic }: { mechanic: Mechanic }) {
     reader.readAsDataURL(file);
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const name = String(form.get("name")).trim();
@@ -37,12 +37,12 @@ export function MechanicProfile({ mechanic }: { mechanic: Mechanic }) {
       setError("Enter your name.");
       return;
     }
-    saveMechanic({
-      ...mechanic, name, email: String(form.get("email")).trim(),
-      phone: String(form.get("phone")).trim(), specialty: String(form.get("specialty")).trim(), photo: currentPhoto,
+    const saved = await saveMechanicProfile({
+      name, email: String(form.get("email")).trim(),
+      phone: String(form.get("phone")).trim(), specialty: String(form.get("specialty")).trim(), photo: currentPhoto ?? null,
     });
     setError("");
-    setMessage("Profile saved in this browser.");
+    if (saved) setMessage("Profile saved.");
   }
 
   return (
@@ -51,7 +51,7 @@ export function MechanicProfile({ mechanic }: { mechanic: Mechanic }) {
         <span className="avatar profile-avatar">{currentPhoto ? <img src={currentPhoto} alt="Your profile" /> : <FiUser aria-hidden="true" />}</span>
         <div><h2>{mechanic.name}</h2><p className="muted">@{mechanic.username}</p></div>
         <div className="profile-photo-actions">
-          <label className="button secondary photo-picker"><FiCamera aria-hidden="true" /> Choose photo<input type="file" aria-label="Choose profile photo" accept="image/jpeg,image/png,image/webp" onChange={selectPhoto} /></label>
+          <label className="button secondary photo-picker"><FiCamera aria-hidden="true" /> Choose photo<input type="file" aria-label="Choose profile photo" accept="image/jpeg,image/png" onChange={selectPhoto} /></label>
           {currentPhoto && <button className="button secondary" type="button" onClick={() => { setRemovePhoto(true); setPhoto(undefined); setMessage(""); }}>Remove photo</button>}
         </div>
       </div>

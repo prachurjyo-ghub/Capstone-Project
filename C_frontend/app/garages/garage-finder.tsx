@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiArrowUpRight, FiCheck, FiChevronDown, FiClock, FiMapPin, FiSearch, FiTool, FiTruck, FiX } from "react-icons/fi";
+import { FiArrowUpRight, FiCheck, FiChevronDown, FiMapPin, FiSearch, FiTool, FiTruck } from "react-icons/fi";
 
 import * as Select from "@/components/ui/select";
 
@@ -10,13 +11,8 @@ const areas = ["Mirpur", "Dhanmondi", "Uttara"];
 const services = ["Diagnostics", "Brakes", "AC service", "Electrical", "Body repair", "Routine service"];
 const types = ["General workshop", "Specialist workshop", "Body shop"];
 
-const garages = [
-  { name: "Mirpur Motor Works", area: "Mirpur", type: "General workshop", services: ["Brakes", "Diagnostics", "Routine service"], address: "Block B, Mirpur 10, Dhaka", hours: "Sat–Thu · 9:00 AM–7:00 PM", description: "General inspections, brake checks and scheduled servicing for passenger cars." },
-  { name: "Northline Auto Care", area: "Mirpur", type: "Specialist workshop", services: ["Electrical", "AC service", "Diagnostics"], address: "Section 11, Mirpur, Dhaka", hours: "Sat–Thu · 10:00 AM–7:00 PM", description: "Vehicle electrical checks, air conditioning diagnostics and fault tracing." },
-  { name: "Workshop 11 Body & Paint", area: "Mirpur", type: "Body shop", services: ["Body repair"], address: "Section 12, Mirpur, Dhaka", hours: "Sat–Thu · 9:00 AM–6:00 PM", description: "Body panel inspections and assessment of scratches, dents and paint damage." },
-  { name: "Lake Road Auto Centre", area: "Dhanmondi", type: "General workshop", services: ["Diagnostics", "Brakes", "Routine service"], address: "Road 8, Dhanmondi, Dhaka", hours: "Sat–Thu · 9:00 AM–6:00 PM", description: "General vehicle checks and routine maintenance." },
-  { name: "Sector Seven Auto", area: "Uttara", type: "Specialist workshop", services: ["Electrical", "AC service"], address: "Sector 7, Uttara, Dhaka", hours: "Sat–Thu · 10:00 AM–7:00 PM", description: "Auto electrical and air conditioning inspections." },
-];
+type Garage = { slug: string; name: string; area: string; type: string; services: string[]; address: string; phone: string; hours: string; description: string };
+const api = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
 function SearchField({ label, name, icon, value, options, empty }: {
   label: string;
@@ -58,16 +54,31 @@ export function GarageFinder() {
   const area = areas.find((item) => item === query.get("area")) ?? areas[0];
   const service = services.find((item) => item === query.get("service")) ?? "";
   const type = types.find((item) => item === query.get("type")) ?? "";
-  const matches = garages.filter((garage) =>
-    garage.area === area && (!service || garage.services.includes(service)) && (!type || garage.type === type),
-  );
-  const [selected, setSelected] = useState<(typeof garages)[number] | null>(null);
-  const dialog = useRef<HTMLDialogElement>(null);
+  const page = Math.max(1, Math.min(1000, Math.trunc(Number(query.get("page"))) || 1));
+  const [retry, setRetry] = useState(0);
+  const [result, setResult] = useState<{ items: Garage[]; total: number; key: string; error?: string }>();
+  const searchKey = new URLSearchParams({ area, page: String(page), ...(service && { service }), ...(type && { type }) }).toString();
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`${api}/garages?${searchKey}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Could not load garages. Try the search again.");
+        const payload = await response.json();
+        setResult({ ...payload.data, key: searchKey });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setResult({ items: [], total: 0, key: searchKey, error: "Could not load garages. Try again." });
+      });
+    return () => controller.abort();
+  }, [searchKey, retry]);
+  const current = result?.key === searchKey ? result : undefined;
+  const matches = current?.items ?? [];
 
-  function search(nextArea: string, nextService = "", nextType = "") {
+  function search(nextArea: string, nextService = "", nextType = "", nextPage = 1) {
     const params = new URLSearchParams({ area: nextArea });
     if (nextService && nextService !== "any") params.set("service", nextService);
     if (nextType && nextType !== "any") params.set("type", nextType);
+    if (nextPage > 1) params.set("page", String(nextPage));
     router.push(`/garages?${params}`, { scroll: false });
   }
 
@@ -107,23 +118,20 @@ export function GarageFinder() {
             <div className="gf-results-heading">
               <div>
                 <h2 id="garage-results">Garages in {area}</h2>
-                <p aria-live="polite">{matches.length} {matches.length === 1 ? "workshop" : "workshops"} found</p>
+                <p aria-live="polite">{current && !current.error ? `${current.total} ${current.total === 1 ? "workshop" : "workshops"} found` : ""}</p>
               </div>
-              <span className="gf-preview">Sample listings</span>
             </div>
 
-            {matches.length ? (
+            {!current ? <p role="status">Loading garages…</p> : current.error ? <div className="gf-empty"><p role="alert">{current.error}</p><button type="button" className="gf-link" onClick={() => setRetry((value) => value + 1)}>Retry</button></div> : matches.length ? (
               <ul className="gf-grid">
                 {matches.map((garage) => (
-                  <li className="gf-card" key={garage.name}>
+                  <li className="gf-card" key={garage.slug}>
                     <div className="gf-card-top"><span className="gf-card-icon"><FiTool aria-hidden="true" /></span><span>{garage.type}</span></div>
                     <h3>{garage.name}</h3>
                     <p className="gf-meta"><FiMapPin aria-hidden="true" /> {garage.address}</p>
                     <ul className="gf-tags" aria-label="Offered services">{garage.services.map((item) => <li key={item}>{item}</li>)}</ul>
-                    <button className="gf-link" type="button" onClick={() => {
-                      setSelected(garage);
-                      dialog.current?.showModal();
-                    }}>View garage <FiArrowUpRight aria-hidden="true" /></button>
+                    <Link className="gf-link" href={`/garages/${garage.slug}`}>View garage <FiArrowUpRight aria-hidden="true" /></Link>
+                    <a className="gf-link" href={`tel:${garage.phone.replace(/[ -]/g, "")}`}>Call workshop</a>
                   </li>
                 ))}
               </ul>
@@ -135,23 +143,15 @@ export function GarageFinder() {
                 <button className="gf-link" type="button" onClick={() => search(area)}>Clear service and type</button>
               </div>
             )}
+            {current && !current.error && current.total > 24 && (
+              <div className="flex gap-4">
+                {page > 1 && <button className="gf-link" type="button" onClick={() => search(area, service, type, page - 1)}>Previous</button>}
+                {page * 24 < current.total && <button className="gf-link" type="button" onClick={() => search(area, service, type, page + 1)}>Next</button>}
+              </div>
+            )}
           </section>
         </div>
 
-        <dialog className="gf-dialog" ref={dialog} aria-labelledby="garage-detail-title">
-          {selected && (
-            <>
-              <button className="gf-close" type="button" aria-label="Close garage detail" onClick={() => dialog.current?.close()}><FiX /></button>
-              <span className="gf-card-icon"><FiTool aria-hidden="true" /></span>
-              <p className="gf-meta">{selected.type}</p>
-              <h2 id="garage-detail-title">{selected.name}</h2>
-              <p>{selected.description}</p>
-              <p className="gf-meta"><FiMapPin aria-hidden="true" /> {selected.address}</p>
-              <p className="gf-meta"><FiClock aria-hidden="true" /> {selected.hours}</p>
-              <ul className="gf-tags" aria-label="Offered services">{selected.services.map((item) => <li key={item}>{item}</li>)}</ul>
-            </>
-          )}
-        </dialog>
       </main>
     </div>
   );

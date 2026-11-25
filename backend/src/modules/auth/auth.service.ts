@@ -279,7 +279,7 @@ export class AuthService {
     }
   }
 
-  async login(input: LoginInput, meta: RequestMetadata): Promise<SessionResponse> {
+  async login(input: LoginInput, meta: RequestMetadata, garage = false): Promise<SessionResponse> {
     const credential = await this.database.user.findUnique({
       where: { email: input.email },
       select: {
@@ -292,7 +292,7 @@ export class AuthService {
     });
     const valid = await verifyPassword(credential?.passwordHash, input.password);
 
-    if (!credential || !valid) {
+    if (!credential || !valid || (credential.role === UserRole.GARAGE_USER) !== garage) {
       await recordAuthAudit(this.database, {
         action: "AUTH_LOGIN_FAILED",
         requestId: meta.requestId,
@@ -352,6 +352,7 @@ export class AuthService {
     rawRefreshToken: string,
     rawCsrfToken: string,
     meta: RequestMetadata,
+    garage = false,
   ): Promise<SessionResponse> {
     const now = new Date();
     const tokenHash = hashOpaqueToken(rawRefreshToken, this.env);
@@ -372,7 +373,13 @@ export class AuthService {
         },
       });
 
-      if (!current) return { type: "invalid" } as const;
+      if (!current || (current.user.role === UserRole.GARAGE_USER) !== garage)
+        return { type: "invalid" } as const;
+
+      if (garage && !await tx.garageMembership.findFirst({
+        where: { userId: current.userId, active: true, garage: { terminatedAt: null, endsAt: { gt: now } } },
+        select: { id: true },
+      })) return { type: "invalid" } as const;
 
       if (current.revokedAt || current.replacedByTokenHash) {
         await tx.refreshSession.updateMany({
@@ -569,9 +576,9 @@ export class AuthService {
   async forgotPassword(input: ForgotPasswordInput, meta: RequestMetadata): Promise<void> {
     const account = await this.database.user.findUnique({
       where: { email: input.email },
-      select: { id: true, email: true },
+      select: { id: true, email: true, role: true },
     });
-    if (!account) {
+    if (!account || account.role === UserRole.GARAGE_USER) {
       await recordAuthAudit(this.database, {
         action: "AUTH_PASSWORD_RESET_REQUESTED",
         requestId: meta.requestId,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FiClipboard, FiHome, FiSearch } from "react-icons/fi";
+import { FiClipboard, FiHome, FiSearch, FiTool } from "react-icons/fi";
 import { useSite } from "./site-context";
 
 const itemClass = (active: boolean) =>
@@ -22,7 +22,7 @@ export function CustomerMobileNav({ hidden = false }: { hidden?: boolean }) {
 
   return (
     <nav
-      className="customer-mobile-nav fixed inset-x-4 z-40 grid grid-cols-3 gap-1 rounded-[22px] border border-[var(--line)] bg-[var(--surface)]/92 p-1.5 shadow-[0_16px_44px_rgba(7,20,38,.22)] backdrop-blur-xl md:hidden"
+      className="customer-mobile-nav fixed inset-x-4 z-40 grid grid-cols-4 gap-1 rounded-[22px] border border-[var(--line)] bg-[var(--surface)]/92 p-1.5 shadow-[0_16px_44px_rgba(7,20,38,.22)] backdrop-blur-xl md:hidden"
       aria-label="Customer mobile navigation"
     >
       <Link
@@ -40,6 +40,10 @@ export function CustomerMobileNav({ hidden = false }: { hidden?: boolean }) {
       >
         <FiSearch size={20} aria-hidden="true" />
         Find Parts
+      </Link>
+      <Link href="/garages" className={itemClass(pathname.startsWith("/garages"))}>
+        <FiTool size={20} aria-hidden="true" />
+        Garages
       </Link>
       {customer ? (
         <button

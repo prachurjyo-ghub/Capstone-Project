@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { FiArrowRight, FiCamera, FiCheck, FiClipboard, FiClock, FiImage, FiPlus, FiTool, FiVideo, FiX } from "react-icons/fi";
-import { sampleMechanicId, saveJob, useGarageDemo, type Evidence, type Finding, type Job, type Report } from "./demo-state";
+import { deleteEvidence, downloadEvidence, jobAction, uploadEvidence, useGarageWorkspace, type Evidence, type Finding, type Job, type Report } from "./workspace-state";
 import { MechanicProfile } from "./mechanic-profile";
 import { mechanicTabs, Status, Workspace, type MechanicTab } from "./workspace";
 
@@ -14,9 +14,11 @@ function isOpen(job: Job) {
 
 function ReportEditor({ job, onSubmitted }: { job: Job; onSubmitted: () => void }) {
   const [draft, setDraft] = useState<Report | null>(null);
-  const report = draft ?? job.report ?? emptyReport;
+  const report = { ...(draft ?? job.report ?? emptyReport), evidence: job.report?.evidence ?? [] };
   const [message, setMessage] = useState("");
   const [fileError, setFileError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [retryFile, setRetryFile] = useState<File>();
   const [previewUrl, setPreviewUrl] = useState<{ id: string; url: string } | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const clipInput = useRef<HTMLInputElement>(null);
@@ -36,7 +38,7 @@ function ReportEditor({ job, onSubmitted }: { job: Job; onSubmitted: () => void 
     editReport((current) => ({ ...current, findings: current.findings.map((finding, position) => position === index ? { ...finding, [field]: value } : finding) }));
   }
 
-  function addEvidence(event: ChangeEvent<HTMLInputElement>, kind: Evidence["kind"]) {
+  async function addEvidence(event: ChangeEvent<HTMLInputElement>, kind: Evidence["kind"]) {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = "";
     if (!file) return;
@@ -56,27 +58,44 @@ function ReportEditor({ job, onSubmitted }: { job: Job; onSubmitted: () => void 
     setFileError(error);
     if (error) return;
 
-    const item: Evidence = { id: crypto.randomUUID(), name: file.name, kind, size: file.size };
-    editReport((current) => ({ ...current, evidence: [...current.evidence, item] }));
-    if (photo) setPreviewUrl({ id: item.id, url: URL.createObjectURL(file) });
-    setMessage("");
+    await upload(file);
   }
 
-  function persist(next: Job["status"]) {
+  async function upload(file: File) {
+    setUploading(true);
+    setRetryFile(undefined);
+    setMessage("");
+    const uploaded = await uploadEvidence(job.id, file);
+    setUploading(false);
+    if (!uploaded) {
+      setFileError("Upload failed. Your report draft is still here.");
+      setRetryFile(file);
+      return;
+    }
+    setFileError("");
+    if (uploaded.result.kind === "photo") setPreviewUrl({ id: uploaded.result.id, url: URL.createObjectURL(file) });
+  }
+
+  async function persist(next: Job["status"]) {
     const summary = report.summary.trim();
     if (next === "Ready for review" && !summary) {
       setMessage("Add an inspection summary before submitting.");
       return;
     }
-    saveJob({ ...job, report: { ...report, summary }, status: next });
+    const photoIds = new Set(report.evidence.filter((file) => file.kind === "photo").map((file) => file.id));
+    const findings = report.findings.map((finding) => ({
+      ...finding, ...(finding.evidenceIds && { evidenceIds: finding.evidenceIds.filter((id) => photoIds.has(id)) }),
+    }));
+    const saved = await jobAction(job.id, { action: next === "Ready for review" ? "submit" : "draft", report: { summary, findings } });
+    if (!saved) return false;
     setDraft(null);
-    setMessage(next === "Ready for review" ? "Report ready for owner review." : "Draft saved in this browser.");
+    setMessage(next === "Ready for review" ? "Report ready for owner review." : "Draft saved.");
+    return true;
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    persist("Ready for review");
-    if (report.summary.trim()) onSubmitted();
+    if (await persist("Ready for review")) onSubmitted();
   }
 
   return (
@@ -103,6 +122,17 @@ function ReportEditor({ job, onSubmitted }: { job: Job; onSubmitted: () => void 
               <label>Component<input value={finding.component} disabled={!editable} onChange={(event) => updateFinding(index, "component", event.currentTarget.value)} /></label>
               <label>What you observed<input value={finding.issue} disabled={!editable} onChange={(event) => updateFinding(index, "issue", event.currentTarget.value)} /></label>
               <label>Recommended next step<input value={finding.nextStep} disabled={!editable} onChange={(event) => updateFinding(index, "nextStep", event.currentTarget.value)} /></label>
+              {report.evidence.filter((file) => file.kind === "photo").map((file) => <label className="check-row" key={file.id}>
+                <input type="checkbox" checked={finding.evidenceIds?.includes(file.id) ?? false} disabled={!editable}
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked;
+                    editReport((current) => ({ ...current, findings: current.findings.map((entry, position) => {
+                      if (position !== index) return entry;
+                      const ids = entry.evidenceIds ?? [];
+                      return { ...entry, evidenceIds: checked ? [...ids, file.id] : ids.filter((id) => id !== file.id) };
+                    }) }));
+                  }} /> Link {file.name}
+              </label>)}
               {editable && <button type="button" className="text-button" onClick={() => editReport((current) => ({ ...current, findings: current.findings.filter((_, position) => position !== index) }))}>Remove finding</button>}
             </fieldset>
           ))}
@@ -115,23 +145,25 @@ function ReportEditor({ job, onSubmitted }: { job: Job; onSubmitted: () => void 
             <>
               {editable && (
                 <div className="upload-grid">
-                  <button type="button" className="upload" onClick={() => photoInput.current?.click()}><FiCamera aria-hidden="true" /><span><strong>Add photo</strong><small>JPG or PNG · up to 5 MiB</small></span></button>
-                  <button type="button" className="upload" onClick={() => clipInput.current?.click()}><FiVideo aria-hidden="true" /><span><strong>Add video clip</strong><small>MP4 · up to 30 MiB</small></span></button>
+                  <button type="button" className="upload" disabled={uploading} onClick={() => photoInput.current?.click()}><FiCamera aria-hidden="true" /><span><strong>Add photo</strong><small>JPG or PNG · up to 5 MiB</small></span></button>
+                  <button type="button" className="upload" disabled={uploading} onClick={() => clipInput.current?.click()}><FiVideo aria-hidden="true" /><span><strong>Add video clip</strong><small>MP4 · up to 30 MiB</small></span></button>
                   <input ref={photoInput} type="file" accept="image/jpeg,image/png" aria-label="Choose inspection photo" hidden onChange={(event) => addEvidence(event, "photo")} />
                   <input ref={clipInput} type="file" accept="video/mp4" aria-label="Choose inspection clip" hidden onChange={(event) => addEvidence(event, "clip")} />
                 </div>
               )}
+              {uploading && <p role="status">Uploading evidence… <progress aria-label="Uploading evidence" /></p>}
               {fileError && <p className="form-error" role="alert">{fileError}</p>}
+              {retryFile && editable && <button type="button" className="button secondary" onClick={() => upload(retryFile)}>Retry upload</button>}
               {!!report.evidence.length && <ul className="evidence-list">
                 {report.evidence.map((item) => (
                   <li key={item.id}>
                     {previewUrl?.id === item.id
                       ? <img src={previewUrl.url} alt="Selected inspection evidence" />
                       : item.kind === "photo" ? <FiImage aria-hidden="true" /> : <FiVideo aria-hidden="true" />}
-                    <span>{item.name}<small>{Math.max(1, Math.round(item.size / 1024))} KiB</small></span>
-                    {editable && <button type="button" className="icon-button" aria-label={`Remove ${item.name}`} onClick={() => {
+                    <span><button type="button" className="text-button" onClick={() => downloadEvidence(job.id, item)}>{item.name}</button><small>{Math.max(1, Math.round(item.size / 1024))} KiB</small></span>
+                    {editable && <button type="button" className="icon-button" aria-label={`Remove ${item.name}`} onClick={async () => {
+                      if (!await deleteEvidence(job.id, item.id)) return;
                       if (previewUrl?.id === item.id) setPreviewUrl(null);
-                      editReport((current) => ({ ...current, evidence: current.evidence.filter((evidence) => evidence.id !== item.id) }));
                       setFileError("");
                     }}><FiX /></button>}
                   </li>
@@ -144,8 +176,8 @@ function ReportEditor({ job, onSubmitted }: { job: Job; onSubmitted: () => void 
         <div className="inspection-footer">
           {message && <p className={report.summary.trim() ? "success-text" : "form-error"} role="status">{report.summary.trim() && <FiCheck aria-hidden="true" />}{message}</p>}
           {editable && <div className="report-actions">
-            <button className="button secondary" type="button" onClick={() => persist("In progress")}>Save draft</button>
-            <button className="button primary" type="submit">Submit report <FiArrowRight aria-hidden="true" /></button>
+            <button className="button secondary" type="button" disabled={uploading} onClick={() => persist("In progress")}>Save draft</button>
+            <button className="button primary" type="submit" disabled={uploading}>Submit report <FiArrowRight aria-hidden="true" /></button>
           </div>}
         </div>
       </form>
@@ -154,11 +186,10 @@ function ReportEditor({ job, onSubmitted }: { job: Job; onSubmitted: () => void 
 }
 
 export function MechanicWorkspace() {
-  const { jobs, mechanics, profile } = useGarageDemo();
-  const mechanic = mechanics.find((item) => item.id === sampleMechanicId);
+  const { jobs, identity: mechanic, profile } = useGarageWorkspace();
   const [tab, setTab] = useState<MechanicTab>("Dashboard");
   const [showClosed, setShowClosed] = useState(false);
-  const [selectedId, setSelectedId] = useState("JOB-104");
+  const [selectedId, setSelectedId] = useState("");
   const myJobs = jobs.filter((job) => mechanic?.active && job.mechanicId === mechanic.id);
   const openJobs = myJobs.filter(isOpen);
   const visibleJobs = showClosed ? myJobs.filter((job) => !isOpen(job)) : openJobs;

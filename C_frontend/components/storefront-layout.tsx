@@ -7,7 +7,7 @@ import { SiteShell } from "@/components/site-shell";
 export function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname === "/garages") return children;
+  if (pathname === "/garages" || pathname.startsWith("/garages/")) return children;
 
   return <SiteProvider><SiteShell>{children}</SiteShell></SiteProvider>;
 }

@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { FiArrowRight, FiCheck, FiClipboard, FiClock, FiEdit2, FiKey, FiPlus, FiTool, FiUser, FiX } from "react-icons/fi";
-import { garageServices, saveJob, saveMechanic, saveProfile, useGarageDemo, type Job, type Mechanic } from "./demo-state";
+import { createMechanic, garageServices, jobAction, resetMechanic, saveJob, saveMechanic, saveProfile, useGarageWorkspace, type Job, type Mechanic } from "./workspace-state";
 import { FinanceTotals, FinanceView } from "./finance";
 import { JobHandover } from "./job-handover";
 import { GarageSelect } from "./ui/select";
@@ -26,7 +26,7 @@ function JobDetail({ job, mechanics }: { job: Job; mechanics: Mechanic[] }) {
   function assign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const mechanicId = String(new FormData(event.currentTarget).get("mechanic") ?? "");
-    if (mechanicId) saveJob({ ...job, mechanicId, status: "Assigned" });
+    if (mechanicId) void jobAction(job.id, { action: "assign", mechanicId });
   }
 
   const canAssign = !job.report && ["Unassigned", "Assigned"].includes(job.status);
@@ -58,22 +58,23 @@ function JobDetail({ job, mechanics }: { job: Job; mechanics: Mechanic[] }) {
 }
 
 function ProfileForm() {
-  const { profile } = useGarageDemo();
+  const { profile } = useGarageWorkspace();
   const [saved, setSaved] = useState(false);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
-    saveProfile({
+    const result = await saveProfile({
       name: String(fields.get("name")).trim(),
       area: String(fields.get("area")),
       type: String(fields.get("type")),
       address: String(fields.get("address")).trim(),
       phone: String(fields.get("phone")).trim(),
       hours: String(fields.get("hours")).trim(),
+      description: String(fields.get("description")).trim(),
       services: fields.getAll("service").map(String),
     });
-    setSaved(true);
+    if (result) setSaved(true);
   }
 
   return (
@@ -83,27 +84,28 @@ function ProfileForm() {
         <label>Garage name<input name="name" required defaultValue={profile.name} /></label>
         <div className="field-label"><span>Area</span><GarageSelect label="Area" name="area" defaultValue={profile.area} options={["Mirpur", "Dhanmondi", "Uttara"]} required /></div>
         <div className="field-label"><span>Garage type</span><GarageSelect label="Garage type" name="type" defaultValue={profile.type} options={["General workshop", "Specialist workshop", "Body shop"]} required /></div>
-        <label>Public phone<input name="phone" type="tel" defaultValue={profile.phone} placeholder="e.g. +880 1…" /></label>
+        <label>Public phone<input name="phone" type="tel" required defaultValue={profile.phone} placeholder="e.g. +880 1…" /></label>
         <label>Street address<input name="address" defaultValue={profile.address} required /></label>
         <label>Opening hours<input name="hours" defaultValue={profile.hours} /></label>
       </div>
+      <label>About the garage<textarea name="description" rows={3} maxLength={1000} defaultValue={profile.description} /></label>
       <fieldset className="service-choices">
         <legend>Services offered</legend>
         {garageServices.map((service) => <label key={service}><input type="checkbox" name="service" value={service} defaultChecked={profile.services.includes(service)} /> {service}</label>)}
       </fieldset>
       <div className="form-actions">
         <button className="button primary" type="submit">Save profile</button>
-        {saved && <span className="success-text" role="status"><FiCheck aria-hidden="true" /> Saved in this browser</span>}
+        {saved && <span className="success-text" role="status"><FiCheck aria-hidden="true" /> Profile saved</span>}
       </div>
     </form>
   );
 }
 
 export function OwnerWorkspace() {
-  const { jobs, mechanics, profile, finance } = useGarageDemo();
+  const { jobs, mechanics, profile, finance, identity } = useGarageWorkspace();
   const [tab, setTab] = useState<OwnerTab>("Dashboard");
   const [filter, setFilter] = useState<Filter>("All jobs");
-  const [selectedId, setSelectedId] = useState("JOB-103");
+  const [selectedId, setSelectedId] = useState("");
   const [modal, setModal] = useState<Modal>("job");
   const [formError, setFormError] = useState("");
   const [editing, setEditing] = useState<Mechanic | null>(null);
@@ -127,7 +129,7 @@ export function OwnerWorkspace() {
     dialog.current?.showModal();
   }
 
-  function create(event: FormEvent<HTMLFormElement>) {
+  async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -140,21 +142,31 @@ export function OwnerWorkspace() {
         return;
       }
       if (mechanics.some((mechanic) => mechanic.username === username && mechanic.id !== editing?.id)) {
-        setFormError("This username already exists in the preview.");
+        setFormError("This username is already used in your garage.");
         return;
       }
       if (!field("name")) {
         setFormError("Enter the mechanic’s full name.");
         return;
       }
-      saveMechanic({ ...editing, id: editing?.id ?? crypto.randomUUID(), name: field("name"), username, email: field("email"), active: editing?.active ?? true });
+      const input = { name: field("name"), username, email: field("email") };
+      if (editing) {
+        if (!await saveMechanic(input, editing)) return;
+      } else {
+        const created = await createMechanic(input);
+        if (!created) return;
+        setEditing(created.result.member);
+        setModal("reset");
+        setResetCode(created.result.temporaryPassword);
+        return;
+      }
     } else {
-      const nextNumber = Math.max(...jobs.map((job) => Number(job.id.slice(4)))) + 1;
-      const id = `JOB-${nextNumber}`;
-      saveJob({
-        id, vehicle: field("vehicle"), registration: field("registration"), service: field("service"),
-        customer: field("customer"), concern: field("concern"), mechanicId: "", status: "Unassigned", consent: data.has("consent"),
+      const created = await saveJob({
+        vehicle: field("vehicle"), registration: field("registration"), service: field("service"),
+        customer: field("customer"), concern: field("concern"), consent: data.has("consent"),
       });
+      if (!created) return;
+      const id = created.result.id;
       setFilter("All jobs");
       setSelectedId(id);
     }
@@ -179,7 +191,7 @@ export function OwnerWorkspace() {
   }
 
   return (
-    <Workspace role="owner" name="Farhan Ahmed" garage={profile.name} tab={tab} tabs={ownerTabs} onTab={setTab}>
+    <Workspace role="owner" name={identity.name} garage={profile.name} tab={tab} tabs={ownerTabs} onTab={setTab}>
       {tab === "Dashboard" && (
         <>
           <div className="dashboard-banner owner-banner">
@@ -253,7 +265,7 @@ export function OwnerWorkspace() {
               <div className="team-actions">
                 <button className="button secondary" type="button" onClick={() => openModal("mechanic", mechanic)}><FiEdit2 aria-hidden="true" /> Edit</button>
                 <button className="button secondary" type="button" onClick={() => openModal("reset", mechanic)}><FiKey aria-hidden="true" /> Reset access</button>
-                <button className="button secondary" type="button" onClick={() => saveMechanic({ ...mechanic, active: !mechanic.active })}>{mechanic.active ? "Deactivate" : "Activate"}</button>
+                <button className="button secondary" type="button" onClick={() => saveMechanic(mechanic, { id: mechanic.id, active: !mechanic.active })}>{mechanic.active ? "Deactivate" : "Activate"}</button>
               </div>
             </div>
           ))}
@@ -267,16 +279,20 @@ export function OwnerWorkspace() {
         {modal === "reset" ? (
           <div className="stack-form">
             <p>Generate a temporary code for <strong>{editing?.name}</strong> (@{editing?.username}).</p>
-            <p className="muted">This preview illustrates the reset flow. Real credentials will be issued by the backend.</p>
-            {resetCode ? <div className="temporary-code" role="status"><span>Preview code</span><strong>{resetCode}</strong></div>
-              : <button type="button" className="button primary" onClick={() => setResetCode(`Demo-${crypto.randomUUID().slice(0, 8)}`)}>Generate preview code</button>}
+            <p className="muted">Share the temporary password privately. The mechanic will need to change it at sign-in.</p>
+            {resetCode ? <div className="temporary-code" role="status"><span>Temporary password</span><strong>{resetCode}</strong></div>
+              : <button type="button" className="button primary" onClick={async () => {
+                if (!editing) return;
+                const reset = await resetMechanic(editing.id);
+                if (reset) setResetCode(reset.result.temporaryPassword);
+              }}>Reset password</button>}
           </div>
         ) : <form className="stack-form" onSubmit={create} key={`${modal}-${editing?.id ?? "new"}`}>
           {modal === "job" ? (
             <>
               <label>Vehicle<input name="vehicle" placeholder="e.g. Toyota Axio" required /></label>
               <label>Registration number<input name="registration" /></label>
-              <label>Customer email<input name="customer" type="email" placeholder="customer@example.test" required /></label>
+              <label>Customer account email<input name="customer" type="email" placeholder="customer@example.test" required /></label>
               <div className="field-label"><span>Service</span><GarageSelect label="Service" name="service" defaultValue={garageServices[0]} options={garageServices} required /></div>
               <label>Customer concern<textarea name="concern" rows={2} /></label>
               <label className="check-row"><input type="checkbox" name="consent" /> Customer agreed to photo and video evidence</label>
@@ -286,7 +302,7 @@ export function OwnerWorkspace() {
               <label>Full name<input name="name" required defaultValue={editing?.name} /></label>
               <label>Username<input name="username" required defaultValue={editing?.username} /></label>
               <label>Email<input name="email" type="email" required defaultValue={editing?.email} /></label>
-              <p className="muted">Preview accounts are saved in this browser.</p>
+              <p className="muted">New mechanics receive a temporary password.</p>
             </>
           )}
           {formError && <p className="form-error" role="alert">{formError}</p>}
