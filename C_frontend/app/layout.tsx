@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   description: 'Automotive parts sourcing, supplier quotation coordination, and delivery for drivers, garages, and fleets in Bangladesh.'
 };
 
+// Browser extensions may add body attributes before hydration; descendant mismatches remain checked.
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.theme=['dark','\"dark\"'].includes(localStorage.getItem('partarc-theme'))?'dark':'light'}catch{document.documentElement.dataset.theme='light'}" }} /></head><body><StorefrontLayout>{children}</StorefrontLayout></body></html>;
+  return <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: "try{document.documentElement.dataset.theme=['dark','\"dark\"'].includes(localStorage.getItem('partarc-theme'))?'dark':'light'}catch{document.documentElement.dataset.theme='light'}" }} /></head><body suppressHydrationWarning><StorefrontLayout>{children}</StorefrontLayout></body></html>;
 }

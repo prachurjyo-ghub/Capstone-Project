@@ -56,7 +56,11 @@
     "zod": "^4.1.8"
   },
   "overrides": {
-    "body-parser": "2.4.0"
+    "body-parser": "2.4.0",
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.2",
+      "effect": "3.22.5"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",

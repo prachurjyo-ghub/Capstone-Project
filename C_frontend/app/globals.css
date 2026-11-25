@@ -42,7 +42,7 @@ html[data-theme='dark'] {
   --skeleton: #26415c;
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+html { scroll-behavior: smooth; scroll-padding-top: 88px; }
 body { margin: 0; overflow-x: hidden; background: var(--page); color: var(--ink); font-family: 'DM Sans', Arial, sans-serif; font-size: 15px; }
 button, input, textarea, select { font: inherit; }
 button, a, summary { cursor: pointer; }
