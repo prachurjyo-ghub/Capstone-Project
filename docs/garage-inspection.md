@@ -85,6 +85,8 @@ Add one **Garages** menu item in `A_db` at `/garages`, available to authorized a
 
 Build one sign-in screen in `G_db` with **Garage Owner** and **Mechanic** choices, then username and password. The API verifies the credentials, garage access and active membership, and confirms that the selected role matches the account. Open each role’s **Dashboard** after sign-in. Protect each workspace route and API action based on the confirmed membership. Garage sessions use a dedicated `garage` cookie namespace so they can coexist with the customer, supplier and admin sessions.
 
+Owners can request password recovery from the sign-in page using their username and registered email. Admin reviews **Owner password requests** in **Garages**, issues a temporary password, and emails it to the registered address. Issuing the password closes the request and revokes existing sessions. The owner changes the temporary password at next sign-in. Mechanics request a reset from their garage owner.
+
 ## Garage owner workspace
 
 Use five menu items. Keep account actions under the avatar. Start on **Dashboard** with finance totals and jobs needing assignment or report review.
