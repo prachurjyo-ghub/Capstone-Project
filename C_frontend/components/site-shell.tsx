@@ -21,17 +21,17 @@ import { communicationApi, type InAppNotification } from '@/lib/api'
 import { CustomerMobileNav } from './customer-mobile-nav'
 import { ContextualSourcingAction } from './contextual-sourcing-action'
 
-function Logo() {
+function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <Link
       href="/"
       aria-label="PartsArc home"
       className="flex shrink-0 items-center gap-2.5 text-white"
     >
-      <span className="grid size-10 place-items-center bg-[#2478f2] [clip-path:polygon(24%_0,76%_0,100%_50%,76%_100%,24%_100%,0_50%)]">
+      <span className={`grid ${compact ? 'size-8 sm:size-10' : 'size-10'} place-items-center bg-[#2478f2] [clip-path:polygon(24%_0,76%_0,100%_50%,76%_100%,24%_100%,0_50%)]`}>
         <FiSettings size={21} aria-hidden="true" />
       </span>
-      <span className="font-heading text-[22px] font-extrabold leading-none tracking-tight">
+      <span className={`font-heading ${compact ? 'text-xl sm:text-[22px]' : 'text-[22px]'} font-extrabold leading-none tracking-tight`}>
         Parts<span className="text-[#4a96ff]">Arc</span>
         <small className="mt-1 hidden font-body text-[8px] font-semibold tracking-[.14em] text-[#8fa1b8] lg:block">
           PARTS PROCUREMENT PARTNER
@@ -75,6 +75,28 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const [scrolled, setScrolled] = useState(false)
   const [headerHidden, setHeaderHidden] = useState(false)
   const lastScrollY = useRef(0)
+  const notificationButtonRef = useRef<HTMLButtonElement>(null)
+  const notificationPanelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!notificationsOpen) return
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !notificationButtonRef.current?.contains(event.target) && !notificationPanelRef.current?.contains(event.target)) {
+        setNotificationsOpen(false)
+      }
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false)
+        notificationButtonRef.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [notificationsOpen])
   useEffect(() => {
     // Route navigation closes the transient mobile menu.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -178,8 +200,8 @@ export function SiteShell({ children }: { children: ReactNode }) {
         data-hidden={headerHidden ? 'true' : 'false'}
         data-scrolled={scrolled ? 'true' : 'false'}
       >
-        <div className="mx-auto flex min-h-16 w-full max-w-[1320px] items-center gap-4 md:min-h-[72px]">
-          <Logo />
+        <div className="mx-auto flex min-h-16 w-full max-w-[1320px] items-center gap-2 sm:gap-4 md:min-h-[72px]">
+          <Logo compact />
           <nav
             id="main-nav"
             aria-label="Main navigation"
@@ -240,7 +262,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
               </button>
             </div>
           </nav>
-          <div className="ml-auto flex items-center gap-2 xl:ml-0">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2 xl:ml-0">
             <button
               onClick={toggleTheme}
               aria-label={
@@ -256,9 +278,12 @@ export function SiteShell({ children }: { children: ReactNode }) {
             </button>
             {customer && (
               <button
-                onClick={() => setNotificationsOpen((value) => !value)}
+                ref={notificationButtonRef}
+                onClick={() => { setMenuOpen(false); setNotificationsOpen((value) => !value) }}
                 aria-label={`${unread} unread notifications`}
-                className="relative hidden size-11 shrink-0 place-items-center rounded-full border border-white/20 text-white hover:bg-white/10 md:grid"
+                aria-expanded={notificationsOpen}
+                aria-controls="customer-notifications"
+                className="relative grid size-11 shrink-0 place-items-center rounded-full border border-white/20 text-white hover:bg-white/10"
               >
                 <FiBell size={19} />
                 {unread > 0 && (
@@ -308,14 +333,14 @@ export function SiteShell({ children }: { children: ReactNode }) {
               aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
               aria-controls="main-nav"
               aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((value) => !value)}
+              onClick={() => { setNotificationsOpen(false); setMenuOpen((value) => !value) }}
             >
               {menuOpen ? <FiX size={25} /> : <FiMenu size={25} />}
             </button>
           </div>
         </div>
         {customer && notificationsOpen && (
-          <div className="absolute right-[4vw] top-[70px] z-50 w-[min(370px,92vw)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[var(--ink)] shadow-2xl">
+          <div ref={notificationPanelRef} id="customer-notifications" role="region" aria-label="Notifications" className="absolute right-[4vw] top-full z-50 mt-2 w-[min(370px,92vw)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[var(--ink)] shadow-2xl">
             <div className="flex items-center justify-between border-b border-[var(--line)] px-2 pb-2">
               <b className="text-sm">Notifications</b>
               {unread > 0 && (

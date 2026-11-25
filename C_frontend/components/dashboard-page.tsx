@@ -1985,7 +1985,7 @@ export function DashboardPage() {
       <div className="shell mt-8 grid gap-8 lg:grid-cols-[210px_minmax(0,1fr)]">
         <nav
           aria-label="Dashboard sections"
-          className="dashboard-nav h-fit lg:sticky lg:top-6"
+          className="dashboard-nav h-fit lg:sticky lg:top-24"
         >
           {nav.map((item) => (
             <button
